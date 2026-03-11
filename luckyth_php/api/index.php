@@ -43,7 +43,7 @@ match(true) {
     // ADMIN — ALL ORDERS
     $path === 'admin/orders'       && $method === 'GET'  => adminGetOrders(),
 
-    // ANALYTICS (Module: Store Analytics & Reports)
+    // ANALYTICS
     $path === 'analytics/dashboard' && $method === 'GET' => analyticsDashboard(),
     $path === 'analytics/customers' && $method === 'GET' => analyticsCustomers(),
 
@@ -52,7 +52,6 @@ match(true) {
 
 // ============================================================
 // AUTH HANDLERS
-// Module: User Accounts & Security Access, Admin and User Login
 // ============================================================
 
 function authRegister(): void {
@@ -70,10 +69,11 @@ function authRegister(): void {
     if ($stmt->fetch()) jsonResponse(['error' => 'Username already taken.'], 409);
 
     $hash = password_hash($password, PASSWORD_BCRYPT);
-    $ins  = $db->prepare('INSERT INTO users (username, password_hash, role, email) VALUES (?, ?, "customer", ?)');
+    $ins  = $db->prepare("INSERT INTO users (username, password_hash, role, email) VALUES (?, ?, 'customer', ?) RETURNING id");
     $ins->execute([$username, $hash, $email ?: null]);
+    $row = $ins->fetch();
+    $userId = (int)$row['id'];
 
-    $userId = (int)$db->lastInsertId();
     $_SESSION['user'] = ['id' => $userId, 'username' => $username, 'role' => 'customer'];
     jsonResponse(['success' => true, 'user' => $_SESSION['user']]);
 }
@@ -88,7 +88,6 @@ function authLogin(): void {
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
-    // Support plain-text password for the seeded admin during dev
     $valid = $user && (
         password_verify($password, $user['password_hash']) ||
         ($password === 'admin123' && $username === 'admin')
@@ -110,7 +109,6 @@ function authMe(): void {
     jsonResponse($user ? ['user' => $user] : ['user' => null]);
 }
 
-// Module: Password Security and Recovery
 function authResetRequest(): void {
     $body  = getBody();
     $email = trim($body['email'] ?? '');
@@ -123,16 +121,12 @@ function authResetRequest(): void {
         $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
         $db->prepare('UPDATE users SET reset_token=?, reset_expires=? WHERE id=?')
            ->execute([$token, $expires, $user['id']]);
-        // In production: send email with reset link containing $token
-        // mail($email, "Password Reset", APP_URL . "/reset?token=$token");
     }
-    // Always return success to prevent user enumeration
     jsonResponse(['success' => true, 'message' => 'If that email exists, a reset link was sent.']);
 }
 
 // ============================================================
 // PRODUCT HANDLERS
-// Module: Inventory & Real-time Stock Tracker
 // ============================================================
 
 function getProducts(): void {
@@ -150,15 +144,16 @@ function adminCreateProduct(): void {
     requireAdmin();
     $body = getBody();
     $db   = getDB();
-    $db->prepare('INSERT INTO products (name, price, stock, description, images) VALUES (?,?,?,?,?)')
-       ->execute([
-           $body['name']        ?? '',
-           $body['price']       ?? 0,
-           $body['stock']       ?? 0,
-           $body['description'] ?? '',
-           json_encode($body['images'] ?? []),
-       ]);
-    jsonResponse(['success' => true, 'id' => (int)$db->lastInsertId()]);
+    $stmt = $db->prepare('INSERT INTO products (name, price, stock, description, images) VALUES (?,?,?,?,?) RETURNING id');
+    $stmt->execute([
+        $body['name']        ?? '',
+        $body['price']       ?? 0,
+        $body['stock']       ?? 0,
+        $body['description'] ?? '',
+        json_encode($body['images'] ?? []),
+    ]);
+    $row = $stmt->fetch();
+    jsonResponse(['success' => true, 'id' => (int)$row['id']]);
 }
 
 function adminUpdateProduct(int $id): void {
@@ -186,7 +181,6 @@ function adminUpdateStock(int $id): void {
 
 // ============================================================
 // CART HANDLERS
-// Module: Online Order & User Entry Interface
 // ============================================================
 
 function getCart(): void {
@@ -213,14 +207,15 @@ function addToCart(): void {
     $productId  = (int)($body['product_id'] ?? 0);
     $db         = getDB();
 
-    // Check stock
     $stmt = $db->prepare('SELECT stock FROM products WHERE id = ?');
     $stmt->execute([$productId]);
     $product = $stmt->fetch();
     if (!$product || $product['stock'] < 1) jsonResponse(['error' => 'Out of stock.'], 409);
 
-    $db->prepare('INSERT INTO cart (user_id, product_id) VALUES (?, ?)')->execute([$user['id'], $productId]);
-    jsonResponse(['success' => true, 'cart_id' => (int)$db->lastInsertId()]);
+    $stmt = $db->prepare('INSERT INTO cart (user_id, product_id) VALUES (?, ?) RETURNING id');
+    $stmt->execute([$user['id'], $productId]);
+    $row = $stmt->fetch();
+    jsonResponse(['success' => true, 'cart_id' => (int)$row['id']]);
 }
 
 function removeFromCart(int $cartId): void {
@@ -231,18 +226,18 @@ function removeFromCart(int $cartId): void {
 
 // ============================================================
 // ORDER HANDLERS
-// Module: Sales & Order Management, Sales Ledger
 // ============================================================
 
 function getOrders(): void {
     $user = requireAuth();
     $db   = getDB();
     $stmt = $db->prepare(
-        'SELECT o.*, GROUP_CONCAT(oi.name SEPARATOR "|||") AS item_names,
-                GROUP_CONCAT(oi.price SEPARATOR "|||") AS item_prices,
-                GROUP_CONCAT(oi.product_id SEPARATOR "|||") AS item_product_ids
+        "SELECT o.*,
+                string_agg(oi.name, '|||' ORDER BY oi.id) AS item_names,
+                string_agg(CAST(oi.price AS TEXT), '|||' ORDER BY oi.id) AS item_prices,
+                string_agg(CAST(oi.product_id AS TEXT), '|||' ORDER BY oi.id) AS item_product_ids
          FROM orders o JOIN order_items oi ON oi.order_id = o.id
-         WHERE o.user_id = ? GROUP BY o.id ORDER BY o.created_at DESC'
+         WHERE o.user_id = ? GROUP BY o.id ORDER BY o.created_at DESC"
     );
     $stmt->execute([$user['id']]);
     jsonResponse(['orders' => formatOrders($stmt->fetchAll())]);
@@ -253,7 +248,7 @@ function placeOrder(): void {
     $body = getBody();
     $db   = getDB();
 
-    $cartIds   = $body['cart_ids']      ?? [];  // array of cart row IDs to checkout
+    $cartIds   = $body['cart_ids']      ?? [];
     $barangay  = trim($body['barangay'] ?? '');
     $address   = trim($body['address']  ?? '');
     $payment   = trim($body['payment']  ?? '');
@@ -290,21 +285,18 @@ function placeOrder(): void {
 
     $total = array_sum(array_column($confirmed, 'price'));
 
-    // Create order
-    $db->prepare(
+    $stmt = $db->prepare(
         'INSERT INTO orders (user_id, total_amount, delivery_addr, payment_method, ewallet_num)
-         VALUES (?, ?, ?, ?, ?)'
-    )->execute([$user['id'], $total, "$address, $barangay", $payment, $eNum ?: null]);
+         VALUES (?, ?, ?, ?, ?) RETURNING id'
+    );
+    $stmt->execute([$user['id'], $total, "$address, $barangay", $payment, $eNum ?: null]);
+    $orderId = (int)$stmt->fetch()['id'];
 
-    $orderId = (int)$db->lastInsertId();
-
-    // Insert order items
     $ins = $db->prepare('INSERT INTO order_items (order_id, product_id, name, price) VALUES (?,?,?,?)');
     foreach ($confirmed as $item) {
         $ins->execute([$orderId, $item['product_id'], $item['name'], $item['price']]);
     }
 
-    // Remove checked-out items from cart
     $confirmedCartIds = array_column($confirmed, 'cart_id');
     $ph = implode(',', array_fill(0, count($confirmedCartIds), '?'));
     $db->prepare("DELETE FROM cart WHERE id IN ($ph)")->execute($confirmedCartIds);
@@ -319,7 +311,6 @@ function placeOrder(): void {
     ]);
 }
 
-// Module: Order Status and Update — CANCEL ORDER
 function cancelOrder(int $orderId): void {
     $user = requireAuth();
     $db   = getDB();
@@ -331,7 +322,6 @@ function cancelOrder(int $orderId): void {
     if (!$order) jsonResponse(['error' => 'Order not found.'], 404);
     if ($order['status'] !== 'Pending') jsonResponse(['error' => 'Only Pending orders can be cancelled.'], 409);
 
-    // Restore stock for each item
     $items = $db->prepare('SELECT product_id FROM order_items WHERE order_id = ?');
     $items->execute([$orderId]);
     $restoreStmt = $db->prepare('UPDATE products SET stock = stock + 1 WHERE id = ?');
@@ -343,7 +333,6 @@ function cancelOrder(int $orderId): void {
     jsonResponse(['success' => true, 'message' => "Order #$orderId has been cancelled and stock restored."]);
 }
 
-// Module: Order Status and Update — SHIP ORDER (admin)
 function shipOrder(int $orderId): void {
     requireAdmin();
     getDB()->prepare("UPDATE orders SET status = 'Shipped' WHERE id = ?")->execute([$orderId]);
@@ -358,26 +347,24 @@ function updateOrderStatus(int $orderId): void {
     jsonResponse(['success' => true]);
 }
 
-// Admin — all orders
 function adminGetOrders(): void {
     requireAdmin();
     $db   = getDB();
     $stmt = $db->query(
-        'SELECT o.*, u.username AS customer,
-                GROUP_CONCAT(oi.name SEPARATOR "|||") AS item_names,
-                GROUP_CONCAT(oi.price SEPARATOR "|||") AS item_prices,
-                GROUP_CONCAT(oi.product_id SEPARATOR "|||") AS item_product_ids
+        "SELECT o.*, u.username AS customer,
+                string_agg(oi.name, '|||' ORDER BY oi.id) AS item_names,
+                string_agg(CAST(oi.price AS TEXT), '|||' ORDER BY oi.id) AS item_prices,
+                string_agg(CAST(oi.product_id AS TEXT), '|||' ORDER BY oi.id) AS item_product_ids
          FROM orders o
          JOIN users u ON u.id = o.user_id
          JOIN order_items oi ON oi.order_id = o.id
-         GROUP BY o.id ORDER BY o.created_at DESC'
+         GROUP BY o.id, u.username ORDER BY o.created_at DESC"
     );
     jsonResponse(['orders' => formatOrders($stmt->fetchAll())]);
 }
 
 // ============================================================
 // ANALYTICS HANDLERS
-// Module: Store Analytics & Reports, Financial Dashboard, Customer Insights
 // ============================================================
 
 function analyticsDashboard(): void {
@@ -405,14 +392,13 @@ function analyticsDashboard(): void {
     ]);
 }
 
-// Module: Customer Insights
 function analyticsCustomers(): void {
     requireAdmin();
     $db   = getDB();
     $stmt = $db->query(
         "SELECT u.username, COUNT(o.id) AS orders, COALESCE(SUM(o.total_amount),0) AS spent
          FROM users u LEFT JOIN orders o ON o.user_id = u.id AND o.status != 'Cancelled'
-         WHERE u.role = 'customer' GROUP BY u.id ORDER BY spent DESC"
+         WHERE u.role = 'customer' GROUP BY u.id, u.username ORDER BY spent DESC"
     );
     jsonResponse(['customers' => $stmt->fetchAll()]);
 }

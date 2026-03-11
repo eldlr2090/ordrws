@@ -1,25 +1,24 @@
 <?php
 // ============================================================
-// config.php — Database connection settings
-// Edit these to match your phpMyAdmin / MySQL setup.
+// config.php — Database connection settings (PostgreSQL)
 // ============================================================
 
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'luckyth_db');
-define('DB_USER', 'root');       // change to your MySQL username
-define('DB_PASS', '');           // change to your MySQL password
-define('DB_CHARSET', 'utf8mb4');
+define('DB_HOST',    getenv('PGHOST')     ?: 'localhost');
+define('DB_PORT',    getenv('PGPORT')     ?: '5432');
+define('DB_NAME',    getenv('PGDATABASE') ?: 'heliumdb');
+define('DB_USER',    getenv('PGUSER')     ?: 'postgres');
+define('DB_PASS',    getenv('PGPASSWORD') ?: '');
 
 // Session secret (change this to a random string)
 define('SESSION_SECRET', 'luckyth_orderwise_2025');
 
 // App base URL (no trailing slash)
-define('APP_URL', 'http://localhost/luckyth_php');
+define('APP_URL', 'http://localhost:5000');
 
 function getDB(): PDO {
     static $pdo = null;
     if ($pdo === null) {
-        $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+        $dsn = "pgsql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME;
         $pdo = new PDO($dsn, DB_USER, DB_PASS, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
