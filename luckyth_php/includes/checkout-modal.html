@@ -1,0 +1,77 @@
+<!-- CHECKOUT MODAL — included on cart.html -->
+<div id="checkout-modal" class="fixed inset-0 z-[120] modal-overlay hidden items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl fade-in relative overflow-y-auto max-h-[95vh]">
+        <button onclick="Checkout.close()" class="absolute top-6 right-6 p-2 bg-white/80 backdrop-blur rounded-full hover:bg-slate-100 z-10 text-navy"><i data-lucide="x"></i></button>
+        <div class="bg-navy px-10 pt-10 pb-8">
+            <p class="text-[10px] font-black text-orange uppercase tracking-widest mb-1">LuckyThrift</p>
+            <h2 class="text-3xl font-black text-white">Checkout</h2>
+            <p class="text-slate-400 text-sm mt-1">Review and complete your order</p>
+        </div>
+        <div class="px-10 pt-6">
+            <div class="bg-slate-50 rounded-2xl p-4 border-2 border-slate-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">You're ordering</p>
+                        <p class="font-black text-navy text-lg" id="checkout-item-name">Item</p>
+                    </div>
+                    <span class="text-2xl font-black text-orange" id="checkout-item-price">₱0</span>
+                </div>
+                <div id="checkout-item-breakdown" class="hidden mt-3 pt-3 border-t border-slate-200 space-y-0.5"></div>
+            </div>
+        </div>
+        <div class="px-10 py-6 space-y-6">
+            <div>
+                <label class="block text-xs font-black text-navy uppercase tracking-widest mb-3">
+                    <i data-lucide="map-pin" class="w-4 h-4 inline-block mr-1 text-orange"></i> Delivery Location
+                </label>
+                <select id="checkout-barangay" class="w-full px-5 py-3.5 rounded-2xl border-2 border-slate-100 focus:border-navy focus:outline-none font-bold text-navy bg-white mb-3">
+                    <option value="">— Select Barangay —</option>
+                    <option>Barangay Bagong Pag-asa</option>
+                    <option>Barangay Batasan Hills</option>
+                    <option>Barangay Commonwealth</option>
+                    <option>Barangay Culiat</option>
+                    <option>Barangay Holy Spirit</option>
+                    <option>Barangay Payatas</option>
+                    <option>Barangay Sauyo</option>
+                    <option>Barangay Tandang Sora</option>
+                    <option>Barangay Tatalon</option>
+                    <option>Barangay Vasra</option>
+                </select>
+                <input type="text" id="checkout-address" placeholder="House No. / Street / Landmark"
+                    class="w-full px-5 py-3.5 rounded-2xl border-2 border-slate-100 focus:border-navy focus:outline-none font-bold text-navy placeholder:font-normal placeholder:text-slate-400">
+            </div>
+            <div>
+                <label class="block text-xs font-black text-navy uppercase tracking-widest mb-3">
+                    <i data-lucide="credit-card" class="w-4 h-4 inline-block mr-1 text-orange"></i> Payment Method
+                </label>
+                <div class="grid grid-cols-3 gap-3" id="payment-options">
+                    <label class="payment-option cursor-pointer">
+                        <input type="radio" name="payment" value="GCash" class="sr-only">
+                        <div class="payment-card border-2 border-slate-100 rounded-2xl p-3 text-center transition-all hover:border-navy">
+                            <div class="text-2xl mb-1">📱</div><p class="text-xs font-black text-navy">GCash</p>
+                        </div>
+                    </label>
+                    <label class="payment-option cursor-pointer">
+                        <input type="radio" name="payment" value="Maya" class="sr-only">
+                        <div class="payment-card border-2 border-slate-100 rounded-2xl p-3 text-center transition-all hover:border-navy">
+                            <div class="text-2xl mb-1">💳</div><p class="text-xs font-black text-navy">Maya</p>
+                        </div>
+                    </label>
+                    <label class="payment-option cursor-pointer">
+                        <input type="radio" name="payment" value="COD" class="sr-only">
+                        <div class="payment-card border-2 border-slate-100 rounded-2xl p-3 text-center transition-all hover:border-navy">
+                            <div class="text-2xl mb-1">💵</div><p class="text-xs font-black text-navy">Cash on Delivery</p>
+                        </div>
+                    </label>
+                </div>
+                <div id="ewallet-input" class="hidden mt-3">
+                    <input type="text" id="checkout-ewallet-num" placeholder="e-wallet number (09XX XXX XXXX)"
+                        class="w-full px-5 py-3.5 rounded-2xl border-2 border-slate-100 focus:border-navy focus:outline-none font-bold text-navy placeholder:font-normal placeholder:text-slate-400">
+                </div>
+            </div>
+            <button id="place-order-btn" onclick="Checkout.placeOrder()" class="w-full btn-primary py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-lg shadow-orange/30">
+                <i data-lucide="check-circle" class="w-5 h-5"></i> Place Order
+            </button>
+        </div>
+    </div>
+</div>
