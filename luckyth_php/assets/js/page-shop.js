@@ -28,7 +28,7 @@ function renderGrid(products) {
 function productCard(p) {
     const img = p.images?.[0] || '';
     return `
-    <a href="/luckyth_php/products/product-${p.id}.html"
+    <a href="/products/product-${p.id}.html"
        class="bg-white rounded-[2rem] overflow-hidden border-2 border-slate-100 hover:border-orange transition-all duration-300 group block">
         <div class="aspect-[4/5] relative overflow-hidden bg-slate-100">
             <img src="${img}" alt="${p.name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">

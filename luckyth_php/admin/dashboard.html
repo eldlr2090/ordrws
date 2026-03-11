@@ -55,13 +55,13 @@
 <script>
     // Load sidebar and then dashboard stats
     document.addEventListener('DOMContentLoaded', async () => {
-        await loadInclude('sidebar-placeholder', '/luckyth_php/includes/admin-sidebar.html');
-        await loadInclude('toast-placeholder',   '/luckyth_php/includes/toast.html');
+        await loadInclude('sidebar-placeholder', '/includes/admin-sidebar.html');
+        await loadInclude('toast-placeholder',   '/includes/toast.html');
         lucide.createIcons();
         // Wait for Nav to be ready then load stats
         document.addEventListener('pageReady', async () => {
             if (!Nav.user || Nav.user.role !== 'admin') {
-                window.location.href = '/luckyth_php/index.html'; return;
+                window.location.href = '/index.html'; return;
             }
             // Highlight active link
             document.querySelectorAll('.admin-nav-btn[data-page]').forEach(a => {

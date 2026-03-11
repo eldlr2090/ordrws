@@ -3,7 +3,7 @@
 document.addEventListener('pageReady', initCart);
 
 async function initCart() {
-    await loadInclude('checkout-placeholder', '/luckyth_php/includes/checkout-modal.html');
+    await loadInclude('checkout-placeholder', '/includes/checkout-modal.html');
     lucide.createIcons();
 
     if (!Nav.user) {
@@ -28,7 +28,7 @@ async function renderCartItems() {
             list.innerHTML = `
                 <div class="text-center py-10">
                     <p class="text-slate-400 font-bold text-lg mb-2">Your cart is empty.</p>
-                    <a href="/luckyth_php/shop.html" class="text-orange font-bold underline">Browse the Storefront</a>
+                    <a href="/shop.html" class="text-orange font-bold underline">Browse the Storefront</a>
                 </div>`;
             document.getElementById('checkout-bar').classList.add('hidden');
             return;
@@ -38,11 +38,11 @@ async function renderCartItems() {
             <div class="flex items-center gap-4 p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl hover:border-navy transition-colors">
                 <input type="checkbox" class="cart-item-checkbox w-5 h-5 accent-orange cursor-pointer rounded"
                     data-cartid="${item.cart_id}" data-price="${item.price}" onchange="updateCheckoutBar()">
-                <a href="/luckyth_php/products/product-${item.product_id}.html">
+                <a href="/products/product-${item.product_id}.html">
                     <img src="${item.images?.[0] || ''}" class="w-14 h-14 rounded-xl object-cover shrink-0 hover:opacity-80 transition">
                 </a>
                 <div class="flex-1 min-w-0">
-                    <a href="/luckyth_php/products/product-${item.product_id}.html" class="font-black text-navy hover:text-orange transition-colors">${item.name}</a>
+                    <a href="/products/product-${item.product_id}.html" class="font-black text-navy hover:text-orange transition-colors">${item.name}</a>
                     <p class="text-sm font-bold text-orange">₱${item.price}</p>
                     ${item.stock < 1 ? '<p class="text-xs font-bold text-red-400 mt-1">⚠ Now out of stock — remove before checkout</p>' : ''}
                 </div>

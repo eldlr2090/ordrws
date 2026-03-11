@@ -54,11 +54,11 @@
 <script src="../assets/js/page-admin.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadInclude('sidebar-placeholder', '/luckyth_php/includes/admin-sidebar.html');
-    await loadInclude('toast-placeholder',   '/luckyth_php/includes/toast.html');
+    await loadInclude('sidebar-placeholder', '/includes/admin-sidebar.html');
+    await loadInclude('toast-placeholder',   '/includes/toast.html');
     lucide.createIcons();
     document.addEventListener('pageReady', async () => {
-        if (!Nav.user || Nav.user.role !== 'admin') { window.location.href = '/luckyth_php/index.html'; return; }
+        if (!Nav.user || Nav.user.role !== 'admin') { window.location.href = '/index.html'; return; }
         document.querySelectorAll('.admin-nav-btn[data-page]').forEach(a => {
             a.classList.toggle('active', a.dataset.page === 'orders');
         });

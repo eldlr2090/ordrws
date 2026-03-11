@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => setTimeout(initAdmin, 500));
 async function initAdmin() {
     // Guard: must be logged in as admin
     if (!Nav.user || Nav.user.role !== 'admin') {
-        window.location.href = '/luckyth_php/index.html';
+        window.location.href = '/index.html';
         return;
     }
     // Highlight active sidebar link
@@ -21,7 +21,7 @@ async function initAdmin() {
 
 async function adminLogout() {
     await API.logout().catch(() => {});
-    window.location.href = '/luckyth_php/index.html';
+    window.location.href = '/index.html';
 }
 
 // Shared admin sidebar HTML (injected via loadInclude or just copied into each page)

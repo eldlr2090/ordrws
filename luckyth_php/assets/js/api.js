@@ -1,4 +1,4 @@
-const API_BASE = './api/index.php?endpoint=';
+const API_BASE = '/api/index.php?endpoint=';
 
 async function apiFetch(endpoint, method = 'GET', body = null) {
     const opts = {
