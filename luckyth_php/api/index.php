@@ -36,8 +36,9 @@ match(true) {
     // ORDERS
     $path === 'orders'             && $method === 'GET'  => getOrders(),
     $path === 'orders'             && $method === 'POST' => placeOrder(),
-    preg_match('#^orders/(\d+)/cancel$#', $path, $m) && $method === 'PUT'  => cancelOrder((int)$m[1]),
-    preg_match('#^orders/(\d+)/ship$#',   $path, $m) && $method === 'PUT'  => shipOrder((int)$m[1]),
+    preg_match('#^orders/(\d+)/cancel$#',  $path, $m) && $method === 'PUT'  => cancelOrder((int)$m[1]),
+    preg_match('#^orders/(\d+)/ship$#',    $path, $m) && $method === 'PUT'  => shipOrder((int)$m[1]),
+    preg_match('#^orders/(\d+)/deliver$#', $path, $m) && $method === 'PUT'  => deliverOrder((int)$m[1]),
     preg_match('#^orders/(\d+)/status$#', $path, $m) && $method === 'PUT'  => updateOrderStatus((int)$m[1]),
 
     // ADMIN — ALL ORDERS
@@ -255,7 +256,7 @@ function placeOrder(): void {
     $eNum      = trim($body['ewallet_num'] ?? '');
 
     if (empty($cartIds))  jsonResponse(['error' => 'No items selected.'], 422);
-    if (!$barangay)       jsonResponse(['error' => 'Please select a barangay.'], 422);
+    if (!$barangay)       jsonResponse(['error' => 'Please select a province.'], 422);
     if (!$address)        jsonResponse(['error' => 'Please enter your address.'], 422);
     if (!$payment)        jsonResponse(['error' => 'Please select a payment method.'], 422);
 
@@ -337,6 +338,15 @@ function shipOrder(int $orderId): void {
     requireAdmin();
     getDB()->prepare("UPDATE orders SET status = 'Shipped' WHERE id = ?")->execute([$orderId]);
     jsonResponse(['success' => true]);
+}
+
+function deliverOrder(int $orderId): void {
+    requireAdmin();
+    $db   = getDB();
+    $stmt = $db->prepare("UPDATE orders SET status = 'Delivered' WHERE id = ? AND status = 'Shipped'");
+    $stmt->execute([$orderId]);
+    if ($stmt->rowCount() === 0) jsonResponse(['error' => 'Order not found or not yet Shipped.'], 400);
+    jsonResponse(['success' => true, 'message' => "Order #$orderId marked as Delivered."]);
 }
 
 function updateOrderStatus(int $orderId): void {

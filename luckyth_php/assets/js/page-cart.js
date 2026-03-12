@@ -94,7 +94,7 @@ async function renderOrders() {
         }
         list.innerHTML = orders.map(o => {
             const itemSummary = o.items.map(i => i.name).join(', ');
-            const statusClass = { Pending:'bg-orange text-white', Processing:'bg-blue-500 text-white', Shipped:'bg-navy text-white', Cancelled:'bg-slate-300 text-slate-600' }[o.status] || 'bg-slate-200';
+            const statusClass = { Pending:'bg-orange text-white', Processing:'bg-blue-500 text-white', Shipped:'bg-navy text-white', Delivered:'bg-green-500 text-white', Cancelled:'bg-slate-300 text-slate-600' }[o.status] || 'bg-slate-200';
             const canCancel   = o.status === 'Pending';
             return `
             <div class="flex items-center justify-between p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl hover:border-navy transition-colors" id="order-row-${o.id}">
@@ -140,13 +140,14 @@ function openTracking(orderId) {
     document.getElementById('track-item').innerText   = order.items.map(i => i.name).join(', ');
 
     const steps = [
-        { label: 'Order Placed',        desc: 'Your order was received.',          active: true },
-        { label: 'Processing',          desc: 'Admin is preparing your items.',    active: order.status !== 'Pending' },
-        { label: 'Shipped / In Transit',desc: 'Handed to courier / logistics.',    active: order.status === 'Shipped' },
+        { label: 'Order Placed',         desc: 'Your order was received.',             active: true },
+        { label: 'Processing',           desc: 'Admin is preparing your items.',       active: order.status !== 'Pending' },
+        { label: 'Shipped / In Transit', desc: 'Handed to courier / logistics.',       active: ['Shipped','Delivered'].includes(order.status) },
+        { label: 'Delivered',            desc: 'Package received by customer.',        active: order.status === 'Delivered' },
     ];
     document.getElementById('track-timeline').innerHTML = steps.map((s, i) => `
         <div class="relative ${!s.active && i > 0 ? 'opacity-30' : ''}">
-            <div class="absolute -left-[23px] top-1 w-3 h-3 rounded-full ${s.active ? (i===2?'bg-navy animate-pulse':'bg-orange') : 'bg-slate-200'}"></div>
+            <div class="absolute -left-[23px] top-1 w-3 h-3 rounded-full ${s.active ? (i===3?'bg-green-500':i===2?'bg-navy animate-pulse':'bg-orange') : 'bg-slate-200'}"></div>
             <p class="font-bold text-navy text-sm">${s.label}</p>
             <p class="text-[10px] text-slate-400">${s.desc}</p>
         </div>`).join('<div class="mt-6"></div>');
@@ -235,7 +236,7 @@ const Checkout = {
         const ewalletNum = document.getElementById('checkout-ewallet-num').value.trim();
 
         if (!this._cartIds.length) { showToast('No items selected.'); return; }
-        if (!barangay) { showToast('Please select a barangay.'); return; }
+        if (!barangay) { showToast('Please select a province.'); return; }
         if (!address)  { showToast('Please enter your address.'); return; }
         if (!payment)  { showToast('Please select a payment method.'); return; }
         if ((payment.value === 'GCash' || payment.value === 'Maya') && !ewalletNum) {

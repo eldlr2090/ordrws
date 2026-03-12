@@ -41,8 +41,9 @@ const API = {
         apiFetch('orders', 'POST', {
             cart_ids: cartIds, barangay, address, payment, ewallet_num: ewalletNum
         }),
-    cancelOrder: (orderId) => apiFetch(`orders/${orderId}/cancel`, 'PUT'),
-    shipOrder:   (orderId) => apiFetch(`orders/${orderId}/ship`,   'PUT'),
+    cancelOrder:  (orderId) => apiFetch(`orders/${orderId}/cancel`,  'PUT'),
+    shipOrder:    (orderId) => apiFetch(`orders/${orderId}/ship`,    'PUT'),
+    deliverOrder: (orderId) => apiFetch(`orders/${orderId}/deliver`, 'PUT'),
 
     // ── ADMIN ─────────────────────────────────────────────────────────────────
     adminGetOrders: () => apiFetch('admin/orders'),
