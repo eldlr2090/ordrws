@@ -24,12 +24,17 @@
 <main class="pt-24 pb-20 max-w-5xl mx-auto px-4">
 
     <!-- Breadcrumb -->
-    <nav class="flex items-center gap-2 text-xs font-bold text-slate-400 mb-8 pt-4">
-        <a href="/index.html" class="hover:text-navy">Home</a>
-        <i data-lucide="chevron-right" class="w-3 h-3"></i>
-        <a href="/shop.html" class="hover:text-navy">Storefront</a>
-        <i data-lucide="chevron-right" class="w-3 h-3"></i>
-        <span class="text-navy" id="prod-name">Product</span>
+    <nav class="flex items-center justify-between mb-8 pt-4">
+        <div class="flex items-center gap-2 text-xs font-bold text-slate-400">
+            <a href="/index.html" class="hover:text-navy">Home</a>
+            <i data-lucide="chevron-right" class="w-3 h-3"></i>
+            <a href="/shop.html" class="hover:text-navy">Storefront</a>
+            <i data-lucide="chevron-right" class="w-3 h-3"></i>
+            <span class="text-navy" id="prod-name">Product</span>
+        </div>
+        <a href="/shop.html" class="flex items-center gap-2 border-2 border-slate-200 hover:border-navy hover:bg-slate-50 text-navy px-4 py-2 rounded-xl font-bold text-sm transition-colors bg-white">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Storefront
+        </a>
     </nav>
 
     <div id="product-content" class="bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-sm overflow-hidden">
@@ -62,9 +67,6 @@
                     <button id="order-now-btn" class="mt-3 w-full bg-navy text-white hover:bg-orange transition-colors py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2">
                         <i data-lucide="zap" class="w-5 h-5"></i> Order Now
                     </button>
-                    <a href="/shop.html" class="mt-3 w-full flex items-center justify-center gap-2 border-2 border-slate-200 hover:border-navy hover:bg-slate-50 text-navy px-4 py-3 rounded-2xl font-bold text-sm transition-colors">
-                        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Storefront
-                    </a>
                 </div>
             </div>
         </div>
