@@ -77,7 +77,7 @@ function renderProduct(p) {
         btn.innerHTML = `<i data-lucide="lock" class="w-5 h-5"></i> Out of Stock`;
         if (onBtn) {
             onBtn.disabled  = true;
-            onBtn.className = 'w-full bg-slate-200 text-slate-400 py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2 cursor-not-allowed';
+            onBtn.className = 'mt-6 w-full bg-slate-200 text-slate-400 py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2 cursor-not-allowed';
             onBtn.innerHTML = `<i data-lucide="lock" class="w-5 h-5"></i> Out of Stock`;
         }
     } else {
@@ -87,7 +87,7 @@ function renderProduct(p) {
         btn.onclick   = () => addToCart(p.id);
         if (onBtn) {
             onBtn.disabled  = false;
-            onBtn.className = 'w-full bg-navy text-white hover:bg-orange transition-colors py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2';
+            onBtn.className = 'mt-6 w-full bg-navy text-white hover:bg-orange transition-colors py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2';
             onBtn.innerHTML = `<i data-lucide="zap" class="w-5 h-5"></i> Order Now`;
             onBtn.onclick   = () => DirectOrder.open(p);
         }
