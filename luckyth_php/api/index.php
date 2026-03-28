@@ -36,6 +36,7 @@ match(true) {
     // ORDERS
     $path === 'orders'             && $method === 'GET'  => getOrders(),
     $path === 'orders'             && $method === 'POST' => placeOrder(),
+    $path === 'orders/direct'      && $method === 'POST' => directPlaceOrder(),
     preg_match('#^orders/(\d+)/cancel$#',  $path, $m) && $method === 'PUT'  => cancelOrder((int)$m[1]),
     preg_match('#^orders/(\d+)/ship$#',    $path, $m) && $method === 'PUT'  => shipOrder((int)$m[1]),
     preg_match('#^orders/(\d+)/deliver$#', $path, $m) && $method === 'PUT'  => deliverOrder((int)$m[1]),
@@ -310,6 +311,46 @@ function placeOrder(): void {
             ? "Order #$orderId placed successfully!"
             : "Order #$orderId placed. Out of stock: " . implode(', ', $failed),
     ]);
+}
+
+function directPlaceOrder(): void {
+    $user = requireAuth();
+    $body = getBody();
+    $db   = getDB();
+
+    $productId = (int)($body['product_id']   ?? 0);
+    $barangay  = trim($body['barangay']      ?? '');
+    $address   = trim($body['address']       ?? '');
+    $payment   = trim($body['payment']       ?? '');
+    $eNum      = trim($body['ewallet_num']   ?? '');
+
+    if (!$productId) jsonResponse(['error' => 'Invalid product.'], 422);
+    if (!$barangay)  jsonResponse(['error' => 'Please select a province.'], 422);
+    if (!$address)   jsonResponse(['error' => 'Please enter your address.'], 422);
+    if (!$payment)   jsonResponse(['error' => 'Please select a payment method.'], 422);
+
+    $stmt = $db->prepare('SELECT * FROM products WHERE id = ?');
+    $stmt->execute([$productId]);
+    $product = $stmt->fetch();
+
+    if (!$product)             jsonResponse(['error' => 'Product not found.'], 404);
+    if ($product['stock'] <= 0) jsonResponse(['error' => 'This item is out of stock.'], 409);
+
+    $upd = $db->prepare('UPDATE products SET stock = stock - 1 WHERE id = ? AND stock > 0');
+    $upd->execute([$productId]);
+    if ($upd->rowCount() === 0) jsonResponse(['error' => 'Item just went out of stock.'], 409);
+
+    $stmt = $db->prepare(
+        'INSERT INTO orders (user_id, total_amount, delivery_addr, payment_method, ewallet_num)
+         VALUES (?, ?, ?, ?, ?) RETURNING id'
+    );
+    $stmt->execute([$user['id'], $product['price'], "$address, $barangay", $payment, $eNum ?: null]);
+    $orderId = (int)$stmt->fetch()['id'];
+
+    $db->prepare('INSERT INTO order_items (order_id, product_id, name, price) VALUES (?,?,?,?)')
+       ->execute([$orderId, $productId, $product['name'], $product['price']]);
+
+    jsonResponse(['success' => true, 'order_id' => $orderId, 'message' => "Order #$orderId placed successfully!"]);
 }
 
 function cancelOrder(int $orderId): void {

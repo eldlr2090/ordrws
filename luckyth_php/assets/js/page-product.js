@@ -5,6 +5,25 @@
 let _product = null;
 let _imgIdx  = 0;
 
+// Load the Order Now modal include as soon as the DOM is ready
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadInclude('order-now-placeholder', '/includes/order-now-modal.html');
+    lucide.createIcons();
+    // Wire up payment option radio buttons
+    document.querySelectorAll('.on-payment-option').forEach(opt => {
+        const radio = opt.querySelector('input');
+        const card  = opt.querySelector('.on-payment-card');
+        radio?.addEventListener('change', function() {
+            document.querySelectorAll('.on-payment-card').forEach(c => {
+                c.classList.remove('border-navy','bg-navy/5'); c.classList.add('border-slate-100');
+            });
+            card.classList.add('border-navy','bg-navy/5'); card.classList.remove('border-slate-100');
+            document.getElementById('on-ewallet-input').classList.toggle('hidden',
+                radio.value !== 'GCash' && radio.value !== 'Maya');
+        });
+    });
+});
+
 document.addEventListener('pageReady', () => {
     const productId = parseInt(document.body.dataset.productId);
     if (productId) loadProduct(productId);
@@ -27,13 +46,9 @@ async function loadProduct(id) {
 }
 
 function renderProduct(p) {
-    // Title
     document.title = `${p.name} | LuckyThrift`;
-
-    // Main image
     setImage(0);
 
-    // Name / price / description
     document.getElementById('prod-name').innerText  = p.name;
     document.getElementById('prod-price').innerText = `₱${p.price}`;
     document.getElementById('prod-desc').innerText  = p.description || 'Premium vintage piece from the LuckyThrift collection.';
@@ -41,30 +56,44 @@ function renderProduct(p) {
     // Stock badge
     const badge = document.getElementById('prod-stock-badge');
     if (p.stock <= 0) {
-        badge.innerText   = 'Sold Out';
-        badge.className   = 'inline-block bg-navy text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wider';
+        badge.innerText = 'Sold Out';
+        badge.className = 'inline-block bg-navy text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wider';
     } else if (p.stock === 1) {
-        badge.innerText   = 'Last One!';
-        badge.className   = 'inline-block bg-orange text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wider';
+        badge.innerText = 'Last One!';
+        badge.className = 'inline-block bg-orange text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wider';
     } else {
-        badge.innerText   = `In Stock (${p.stock})`;
-        badge.className   = 'inline-block bg-green-500 text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wider';
+        badge.innerText = `In Stock (${p.stock})`;
+        badge.className = 'inline-block bg-green-500 text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wider';
     }
 
-    // Add to cart button
+    // Add to Cart button
     const btn = document.getElementById('add-to-cart-btn');
+    // Order Now button
+    const onBtn = document.getElementById('order-now-btn');
+
     if (p.stock <= 0) {
         btn.disabled  = true;
         btn.className = 'w-full bg-slate-200 text-slate-400 py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 cursor-not-allowed';
         btn.innerHTML = `<i data-lucide="lock" class="w-5 h-5"></i> Out of Stock`;
+        if (onBtn) {
+            onBtn.disabled  = true;
+            onBtn.className = 'w-full bg-slate-200 text-slate-400 py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2 cursor-not-allowed';
+            onBtn.innerHTML = `<i data-lucide="lock" class="w-5 h-5"></i> Out of Stock`;
+        }
     } else {
         btn.disabled  = false;
         btn.className = 'w-full btn-primary py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2';
         btn.innerHTML = `<i data-lucide="shopping-cart" class="w-5 h-5"></i> Add to Cart`;
         btn.onclick   = () => addToCart(p.id);
+        if (onBtn) {
+            onBtn.disabled  = false;
+            onBtn.className = 'w-full bg-navy text-white hover:bg-orange transition-colors py-3.5 rounded-2xl font-black text-base flex items-center justify-center gap-2';
+            onBtn.innerHTML = `<i data-lucide="zap" class="w-5 h-5"></i> Order Now`;
+            onBtn.onclick   = () => DirectOrder.open(p);
+        }
     }
 
-    // Thumbnail strip
+    // Thumbnails
     const thumbs = document.getElementById('prod-thumbs');
     if (p.images?.length > 1) {
         thumbs.innerHTML = p.images.map((img, i) => `
@@ -76,7 +105,6 @@ function renderProduct(p) {
         thumbs.classList.add('hidden');
     }
 
-    // Show/hide arrows
     const showArrows = p.images?.length > 1;
     document.getElementById('prev-btn').classList.toggle('hidden', !showArrows);
     document.getElementById('next-btn').classList.toggle('hidden', !showArrows);
@@ -89,7 +117,7 @@ function setImage(idx) {
     _imgIdx = idx;
     document.getElementById('prod-main-img').src = _product.images[idx];
     document.querySelectorAll('[id^="thumb-"]').forEach((el, i) => {
-        el.classList.toggle('border-orange',   i === idx);
+        el.classList.toggle('border-orange',    i === idx);
         el.classList.toggle('border-slate-200', i !== idx);
     });
 }
@@ -104,11 +132,7 @@ function nextImage() {
 }
 
 async function addToCart(productId) {
-    if (!Nav.user) {
-        showToast('Please Sign In to add items to cart.');
-        Nav.openAuth();
-        return;
-    }
+    if (!Nav.user) { showToast('Please Sign In to add items to cart.'); Nav.openAuth(); return; }
     const btn = document.getElementById('add-to-cart-btn');
     btn.disabled = true;
     btn.innerHTML = `<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Adding…`;
@@ -116,7 +140,7 @@ async function addToCart(productId) {
     try {
         await API.addToCart(productId);
         await Nav.updateCartBadge();
-        showToast(`🛒 Added to cart: ${_product.name}`, 'success');
+        showToast(`Added to cart: ${_product.name}`, 'success');
         btn.innerHTML = `<i data-lucide="check" class="w-5 h-5"></i> Added!`;
         lucide.createIcons();
         setTimeout(() => {
@@ -131,3 +155,74 @@ async function addToCart(productId) {
         lucide.createIcons();
     }
 }
+
+// ── DIRECT ORDER (Order Now) ──────────────────────────────────────────────────
+const DirectOrder = {
+    _productId: null,
+
+    open: function(product) {
+        if (!Nav.user) { showToast('Please Sign In to place an order.'); Nav.openAuth(); return; }
+        this._productId = product.id;
+
+        document.getElementById('on-item-name').innerText  = product.name;
+        document.getElementById('on-item-price').innerText = `₱${product.price}`;
+
+        // Reset fields
+        document.getElementById('on-province').value    = '';
+        document.getElementById('on-address').value     = '';
+        document.getElementById('on-ewallet-num').value = '';
+        document.getElementById('on-ewallet-input').classList.add('hidden');
+        document.querySelectorAll('.on-payment-card').forEach(c => {
+            c.classList.remove('border-navy','bg-navy/5'); c.classList.add('border-slate-100');
+        });
+        document.querySelectorAll('input[name="on-payment"]').forEach(r => r.checked = false);
+
+        const modal = document.getElementById('order-now-modal');
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+        lucide.createIcons();
+    },
+
+    close: function() {
+        const modal = document.getElementById('order-now-modal');
+        modal.classList.add('hidden'); modal.classList.remove('flex');
+        this._productId = null;
+    },
+
+    placeOrder: async function() {
+        const province   = document.getElementById('on-province').value;
+        const address    = document.getElementById('on-address').value.trim();
+        const payment    = document.querySelector('input[name="on-payment"]:checked');
+        const ewalletNum = document.getElementById('on-ewallet-num').value.trim();
+
+        if (!this._productId)    { showToast('Product error. Please try again.', 'error'); return; }
+        if (!province)           { showToast('Please select a province.'); return; }
+        if (!address)            { showToast('Please enter your address.'); return; }
+        if (!payment)            { showToast('Please select a payment method.'); return; }
+        if ((payment.value === 'GCash' || payment.value === 'Maya') && !ewalletNum) {
+            showToast(`Please enter your ${payment.value} number.`); return;
+        }
+
+        const btn = document.getElementById('on-place-btn');
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Placing Order…`;
+        lucide.createIcons();
+
+        try {
+            const result = await API.directOrder(this._productId, province, address, payment.value, ewalletNum);
+            this.close();
+            await Nav.updateCartBadge();
+            showToast(result.message || `Order #${result.order_id} placed!`, 'success');
+            // Update stock badge on the page
+            if (_product) {
+                _product.stock = Math.max(0, _product.stock - 1);
+                renderProduct(_product);
+            }
+        } catch(e) {
+            showToast(e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="zap" class="w-5 h-5"></i> Place Order Now`;
+            lucide.createIcons();
+        }
+    },
+};

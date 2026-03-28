@@ -41,6 +41,8 @@ const API = {
         apiFetch('orders', 'POST', {
             cart_ids: cartIds, barangay, address, payment, ewallet_num: ewalletNum
         }),
+    directOrder:  (product_id, barangay, address, payment, ewalletNum = '') =>
+        apiFetch('orders/direct', 'POST', { product_id, barangay, address, payment, ewallet_num: ewalletNum }),
     cancelOrder:  (orderId) => apiFetch(`orders/${orderId}/cancel`,  'PUT'),
     shipOrder:    (orderId) => apiFetch(`orders/${orderId}/ship`,    'PUT'),
     deliverOrder: (orderId) => apiFetch(`orders/${orderId}/deliver`, 'PUT'),
