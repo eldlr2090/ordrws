@@ -17,8 +17,9 @@
                     <i data-lucide="shopping-cart" class="w-6 h-6"></i>
                     <span id="cart-badge" class="hidden absolute -top-2 -right-2 bg-orange text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">0</span>
                 </a>
-                <a href="/profile.html" id="profile-btn" class="hidden nav-icon" title="My Profile">
-                    <i data-lucide="user-circle" class="w-6 h-6"></i>
+                <a href="/profile.html" id="profile-btn" class="hidden nav-icon items-center justify-center" title="My Profile">
+                    <i data-lucide="user-circle" class="w-6 h-6" id="profile-btn-icon"></i>
+                    <img id="profile-btn-avatar" class="hidden w-9 h-9 rounded-full object-cover ring-2 ring-orange" alt="">
                 </a>
                 <button id="auth-btn"   onclick="Nav.openAuth()"  class="bg-navy text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md hover:bg-slate-800 ml-2">Sign In</button>
                 <button id="logout-btn" onclick="Nav.logout()"    class="hidden border-2 border-navy text-navy px-6 py-2 rounded-full text-sm font-bold hover:bg-slate-100 ml-2">Sign Out</button>

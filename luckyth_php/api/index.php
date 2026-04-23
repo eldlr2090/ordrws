@@ -111,7 +111,12 @@ function authLogout(): void {
 
 function authMe(): void {
     $user = sessionUser();
-    jsonResponse($user ? ['user' => $user] : ['user' => null]);
+    if (!$user) { jsonResponse(['user' => null]); }
+    $stmt = getDB()->prepare('SELECT avatar FROM users WHERE id = ?');
+    $stmt->execute([$user['id']]);
+    $row = $stmt->fetch();
+    $user['avatar'] = $row['avatar'] ?? null;
+    jsonResponse(['user' => $user]);
 }
 
 function authGetProfile(): void {

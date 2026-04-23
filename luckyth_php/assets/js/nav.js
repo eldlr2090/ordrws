@@ -66,6 +66,19 @@ const Nav = {
         show('auth-btn',    !loggedIn);
         show('logout-btn',   loggedIn);
         show('profile-btn',  loggedIn);
+
+        const img = document.getElementById('profile-btn-avatar');
+        const ico = document.getElementById('profile-btn-icon');
+        if (img && ico) {
+            if (loggedIn && this.user.avatar) {
+                img.src = this.user.avatar;
+                img.classList.remove('hidden');
+                ico.classList.add('hidden');
+            } else {
+                img.classList.add('hidden');
+                ico.classList.remove('hidden');
+            }
+        }
     },
 
     updateCartBadge: async function() {
