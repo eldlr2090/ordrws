@@ -23,6 +23,10 @@ const API = {
     me:           () => apiFetch('auth/me'),
     resetRequest: (email) =>
         apiFetch('auth/reset-request', 'POST', { email }),
+    getProfile:    () => apiFetch('auth/profile'),
+    updateProfile: (data) => apiFetch('auth/profile', 'PUT', data),
+    changePassword: (current_password, new_password) =>
+        apiFetch('auth/password', 'PUT', { current_password, new_password }),
 
     // ── PRODUCTS ──────────────────────────────────────────────────────────────
     getProducts:   () => apiFetch('products'),

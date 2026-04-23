@@ -21,6 +21,9 @@ match(true) {
     $path === 'auth/logout'        && $method === 'POST' => authLogout(),
     $path === 'auth/me'            && $method === 'GET'  => authMe(),
     $path === 'auth/reset-request' && $method === 'POST' => authResetRequest(),
+    $path === 'auth/profile'       && $method === 'GET'  => authGetProfile(),
+    $path === 'auth/profile'       && $method === 'PUT'  => authUpdateProfile(),
+    $path === 'auth/password'      && $method === 'PUT'  => authChangePassword(),
 
     // PRODUCTS
     $path === 'products'           && $method === 'GET'  => getProducts(),
@@ -109,6 +112,63 @@ function authLogout(): void {
 function authMe(): void {
     $user = sessionUser();
     jsonResponse($user ? ['user' => $user] : ['user' => null]);
+}
+
+function authGetProfile(): void {
+    $user = requireAuth();
+    $stmt = getDB()->prepare('SELECT id, username, role, email, full_name, phone, address, avatar, created_at FROM users WHERE id = ?');
+    $stmt->execute([$user['id']]);
+    $row = $stmt->fetch();
+    if (!$row) jsonResponse(['error' => 'User not found.'], 404);
+    jsonResponse(['profile' => $row]);
+}
+
+function authUpdateProfile(): void {
+    $user = requireAuth();
+    $body = getBody();
+    $fullName = trim($body['full_name'] ?? '');
+    $email    = trim($body['email']     ?? '');
+    $phone    = trim($body['phone']     ?? '');
+    $address  = trim($body['address']   ?? '');
+    $avatar   = $body['avatar'] ?? null;
+
+    if ($avatar !== null && $avatar !== '' && strlen($avatar) > 2_000_000) {
+        jsonResponse(['error' => 'Profile picture is too large (max ~1.5 MB).'], 413);
+    }
+
+    $db = getDB();
+    if ($avatar === null) {
+        $db->prepare('UPDATE users SET full_name=?, email=?, phone=?, address=? WHERE id=?')
+           ->execute([$fullName ?: null, $email ?: null, $phone ?: null, $address ?: null, $user['id']]);
+    } else {
+        $db->prepare('UPDATE users SET full_name=?, email=?, phone=?, address=?, avatar=? WHERE id=?')
+           ->execute([$fullName ?: null, $email ?: null, $phone ?: null, $address ?: null, $avatar ?: null, $user['id']]);
+    }
+
+    $stmt = $db->prepare('SELECT id, username, role, email, full_name, phone, address, avatar FROM users WHERE id = ?');
+    $stmt->execute([$user['id']]);
+    jsonResponse(['success' => true, 'profile' => $stmt->fetch(), 'message' => 'Profile updated.']);
+}
+
+function authChangePassword(): void {
+    $user = requireAuth();
+    $body = getBody();
+    $current = $body['current_password'] ?? '';
+    $next    = $body['new_password']     ?? '';
+
+    if (strlen($next) < 6) jsonResponse(['error' => 'New password must be at least 6 characters.'], 422);
+
+    $db   = getDB();
+    $stmt = $db->prepare('SELECT password_hash FROM users WHERE id = ?');
+    $stmt->execute([$user['id']]);
+    $row  = $stmt->fetch();
+    if (!$row || !password_verify($current, $row['password_hash'])) {
+        jsonResponse(['error' => 'Current password is incorrect.'], 401);
+    }
+
+    $hash = password_hash($next, PASSWORD_BCRYPT);
+    $db->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([$hash, $user['id']]);
+    jsonResponse(['success' => true, 'message' => 'Password changed.']);
 }
 
 function authResetRequest(): void {
