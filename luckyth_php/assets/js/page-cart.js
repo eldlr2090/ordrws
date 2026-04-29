@@ -231,15 +231,15 @@ const Checkout = {
     },
 
     placeOrder: async function() {
-        const barangay   = document.getElementById('checkout-barangay').value;
         const address    = document.getElementById('checkout-address').value.trim();
         const payment    = document.querySelector('input[name="payment"]:checked');
         const ewalletNum = document.getElementById('checkout-ewallet-num').value.trim();
 
         if (!this._cartIds.length) { showToast('No items selected.'); return; }
-        if (!barangay) { showToast('Please select a province.'); return; }
-        if (!address)  { showToast('Please enter your address.'); return; }
+        if (!address || address.length < 10) { showToast('Please enter your full delivery address.'); return; }
         if (!payment)  { showToast('Please select a payment method.'); return; }
+        // Province field is no longer used; pass empty string for backward compat with API.
+        const barangay = '';
         if ((payment.value === 'GCash' || payment.value === 'Maya') && !ewalletNum) {
             showToast(`Please enter your ${payment.value} number.`); return;
         }

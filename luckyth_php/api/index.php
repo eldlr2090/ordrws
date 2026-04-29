@@ -232,9 +232,10 @@ function getProducts(): void {
     $db   = getDB();
     $rows = $db->query('SELECT * FROM products ORDER BY id ASC')->fetchAll();
     foreach ($rows as &$r) {
-        $r['images'] = json_decode($r['images'] ?? '[]', true);
-        $r['price']  = (float)$r['price'];
-        $r['stock']  = (int)$r['stock'];
+        $r['images']   = json_decode($r['images'] ?? '[]', true);
+        $r['price']    = (float)$r['price'];
+        $r['stock']    = (int)$r['stock'];
+        $r['category'] = $r['category'] ?? 'Other';
     }
     jsonResponse(['products' => $rows]);
 }
@@ -243,13 +244,14 @@ function adminCreateProduct(): void {
     requireAdmin();
     $body = getBody();
     $db   = getDB();
-    $stmt = $db->prepare('INSERT INTO products (name, price, stock, description, images) VALUES (?,?,?,?,?) RETURNING id');
+    $stmt = $db->prepare('INSERT INTO products (name, price, stock, description, images, category) VALUES (?,?,?,?,?,?) RETURNING id');
     $stmt->execute([
         $body['name']        ?? '',
         $body['price']       ?? 0,
         $body['stock']       ?? 0,
         $body['description'] ?? '',
         json_encode($body['images'] ?? []),
+        $body['category']    ?: 'Other',
     ]);
     $row = $stmt->fetch();
     jsonResponse(['success' => true, 'id' => (int)$row['id']]);
@@ -259,12 +261,13 @@ function adminUpdateProduct(int $id): void {
     requireAdmin();
     $body = getBody();
     $db   = getDB();
-    $db->prepare('UPDATE products SET name=?, price=?, description=?, images=? WHERE id=?')
+    $db->prepare('UPDATE products SET name=?, price=?, description=?, images=?, category=? WHERE id=?')
        ->execute([
            $body['name']        ?? '',
            $body['price']       ?? 0,
            $body['description'] ?? '',
            json_encode($body['images'] ?? []),
+           $body['category']    ?: 'Other',
            $id,
        ]);
     jsonResponse(['success' => true]);

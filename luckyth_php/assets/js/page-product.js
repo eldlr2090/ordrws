@@ -189,15 +189,15 @@ const DirectOrder = {
     },
 
     placeOrder: async function() {
-        const province   = document.getElementById('on-province').value;
-        const address    = document.getElementById('on-address').value.trim();
+        const address    = document.getElementById('on-address-full').value.trim();
         const payment    = document.querySelector('input[name="on-payment"]:checked');
         const ewalletNum = document.getElementById('on-ewallet-num').value.trim();
 
         if (!this._productId)    { showToast('Product error. Please try again.', 'error'); return; }
-        if (!province)           { showToast('Please select a province.'); return; }
-        if (!address)            { showToast('Please enter your address.'); return; }
+        if (!address || address.length < 10) { showToast('Please enter your full delivery address.'); return; }
         if (!payment)            { showToast('Please select a payment method.'); return; }
+        // Province no longer used.
+        const province = '';
         if ((payment.value === 'GCash' || payment.value === 'Maya') && !ewalletNum) {
             showToast(`Please enter your ${payment.value} number.`); return;
         }

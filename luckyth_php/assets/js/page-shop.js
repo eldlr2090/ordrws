@@ -46,7 +46,15 @@ function productCard(p) {
     </a>`;
 }
 
-function handleSearch() {
-    const kw = document.getElementById('search-input')?.value.toLowerCase() || '';
-    renderGrid(_allProducts.filter(p => p.name.toLowerCase().includes(kw)));
+function applyFilters() {
+    const kw  = (document.getElementById('search-input')?.value || '').toLowerCase();
+    const cat = document.getElementById('category-select')?.value || '';
+    renderGrid(_allProducts.filter(p => {
+        const matchesName = p.name.toLowerCase().includes(kw);
+        const matchesCat  = !cat || (p.category || 'Other') === cat;
+        return matchesName && matchesCat;
+    }));
 }
+
+function handleSearch()         { applyFilters(); }
+function handleCategoryChange() { applyFilters(); }
