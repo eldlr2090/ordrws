@@ -98,7 +98,7 @@ function wirePrivacyPrefs() {
 
 function wireSignOut() {
     document.getElementById('settings-signout').onclick = () => {
-        if (confirm('Sign out of LuckyThrift?')) Nav.logout();
+        Nav.logout();
     };
 }
 

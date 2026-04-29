@@ -60,6 +60,7 @@ async function renderCartItems() {
 }
 
 async function removeFromCart(cartId) {
+    if (!confirm('Remove this item from your cart?')) return;
     try {
         await API.removeFromCart(cartId);
         await Nav.updateCartBadge();
@@ -242,6 +243,9 @@ const Checkout = {
         if ((payment.value === 'GCash' || payment.value === 'Maya') && !ewalletNum) {
             showToast(`Please enter your ${payment.value} number.`); return;
         }
+
+        const itemCount = this._cartIds.length;
+        if (!confirm(`Place this order for ${itemCount} item${itemCount > 1 ? 's' : ''} using ${payment.value}?`)) return;
 
         const btn = document.getElementById('place-order-btn');
         btn.disabled = true; btn.innerText = 'Placing Order…';

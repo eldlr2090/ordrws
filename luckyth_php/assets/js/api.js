@@ -17,8 +17,8 @@ const API = {
     // ── AUTH ──────────────────────────────────────────────────────────────────
     register:     (username, password, email = '') =>
         apiFetch('auth/register', 'POST', { username, password, email }),
-    login:        (username, password) =>
-        apiFetch('auth/login', 'POST', { username, password }),
+    login:        (username, email, password) =>
+        apiFetch('auth/login', 'POST', { username, email, password }),
     logout:       () => apiFetch('auth/logout', 'POST'),
     me:           () => apiFetch('auth/me'),
     resetRequest: (email) =>

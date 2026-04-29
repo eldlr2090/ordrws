@@ -123,10 +123,15 @@ const Nav = {
     login: async function(e) {
         e.preventDefault();
         const uF = document.getElementById('login-username');
+        const eF = document.getElementById('login-email');
         const pF = document.getElementById('login-password');
         try {
-            const data = await API.login(uF.value.trim(), pF.value.trim());
-            pF.value = ''; uF.value = '';
+            const data = await API.login(
+                uF.value.trim(),
+                (eF?.value || '').trim(),
+                pF.value.trim()
+            );
+            pF.value = ''; uF.value = ''; if (eF) eF.value = '';
             this.user = data.user;
             this.closeAuth();
             this.updateHeader();
@@ -164,8 +169,9 @@ const Nav = {
         }
     },
 
-    // Logout
-    logout: async function() {
+    // Logout (with confirmation)
+    logout: async function(skipConfirm = false) {
+        if (!skipConfirm && !confirm('Sign out of LuckyThrift?')) return;
         await API.logout().catch(() => {});
         this.user = null;
         this.updateHeader();

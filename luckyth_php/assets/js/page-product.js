@@ -202,6 +202,8 @@ const DirectOrder = {
             showToast(`Please enter your ${payment.value} number.`); return;
         }
 
+        if (!confirm(`Place this order using ${payment.value}?`)) return;
+
         const btn = document.getElementById('on-place-btn');
         btn.disabled = true;
         btn.innerHTML = `<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Placing Order…`;

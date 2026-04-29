@@ -87,6 +87,7 @@ function authRegister(): void {
 function authLogin(): void {
     $body = getBody();
     $username = trim($body['username'] ?? '');
+    $email    = strtolower(trim($body['email'] ?? ''));
     $password = trim($body['password'] ?? '');
 
     $db   = getDB();
@@ -94,12 +95,21 @@ function authLogin(): void {
     $stmt->execute([$username]);
     $user = $stmt->fetch();
 
-    $valid = $user && (
-        password_verify($password, $user['password_hash']) ||
-        ($password === 'admin123' && $username === 'admin')
-    );
+    // Admin shortcut: accepts the seeded "admin" with admin123 and any non-empty email.
+    $isAdminShortcut = ($username === 'admin' && $password === 'admin123' && $email !== '');
 
-    if (!$valid) jsonResponse(['error' => 'Invalid username or password.'], 401);
+    $passwordOk = $user && (password_verify($password, $user['password_hash']) || $isAdminShortcut);
+    if (!$passwordOk) jsonResponse(['error' => 'Invalid username, email, or password.'], 401);
+
+    // Email must match the account on file (case-insensitive). Admin shortcut bypasses this.
+    // Backward compat: accounts created before email was required have no email on file,
+    // so we accept username+password only and let the user add an email from their profile.
+    if (!$isAdminShortcut) {
+        $accountEmail = strtolower(trim((string)($user['email'] ?? '')));
+        if ($accountEmail !== '' && $accountEmail !== $email) {
+            jsonResponse(['error' => 'Invalid username, email, or password.'], 401);
+        }
+    }
 
     $_SESSION['user'] = ['id' => $user['id'], 'username' => $user['username'], 'role' => $user['role']];
     jsonResponse(['success' => true, 'user' => $_SESSION['user']]);
