@@ -22,10 +22,15 @@
 
 <main class="pt-24 pb-20 max-w-4xl mx-auto px-4" id="profile-content">
 
-    <div class="mb-6">
+    <div class="mb-6 flex items-center justify-between gap-3">
         <a href="/shop.html" class="inline-flex items-center gap-2 border-2 border-slate-200 hover:border-navy hover:bg-white text-navy px-4 py-2.5 rounded-xl font-bold text-sm transition-colors bg-white shadow-sm">
             <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Storefront
         </a>
+        <button type="button" id="settings-toggle-btn"
+                class="inline-flex items-center gap-2 border-2 border-slate-200 hover:border-navy hover:bg-white text-navy w-11 h-11 rounded-xl transition-colors bg-white shadow-sm justify-center"
+                title="Settings" aria-label="Settings">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
     </div>
 
     <!-- HEADER CARD -->
@@ -39,6 +44,11 @@
                     class="absolute bottom-0 right-0 bg-orange hover:bg-orange/90 text-white w-9 h-9 rounded-full flex items-center justify-center shadow-lg ring-2 ring-navy"
                     title="Change photo">
                 <i data-lucide="camera" class="w-4 h-4"></i>
+            </button>
+            <button id="avatar-remove-btn" type="button"
+                    class="hidden absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-2 ring-navy"
+                    title="Remove photo">
+                <i data-lucide="x" class="w-4 h-4"></i>
             </button>
             <input type="file" id="avatar-input" accept="image/*" class="hidden">
         </div>
@@ -118,10 +128,15 @@
     </div>
 
     <!-- SETTINGS CARD -->
-    <div class="bg-white rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 shadow-sm mb-8">
-        <h2 class="text-2xl font-black text-navy mb-6 border-b border-slate-100 pb-4 flex items-center gap-2">
-            <i data-lucide="settings" class="w-6 h-6 text-orange"></i> Settings
-        </h2>
+    <div id="settings-card" class="hidden bg-white rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 shadow-sm mb-8">
+        <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+            <h2 class="text-2xl font-black text-navy flex items-center gap-2">
+                <i data-lucide="settings" class="w-6 h-6 text-orange"></i> Settings
+            </h2>
+            <button type="button" id="settings-close-btn" class="text-slate-400 hover:text-navy w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100" title="Close">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
 
         <div class="space-y-3">
 

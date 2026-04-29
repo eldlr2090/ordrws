@@ -20,6 +20,7 @@ async function initProfile() {
     }
 
     wireProfileEditing();
+    wireSettingsToggle();
     wireSettingsRows();
     wirePasswordChange();
     wireNotificationPrefs();
@@ -28,6 +29,18 @@ async function initProfile() {
     wireDeleteAccount();
     wireAvatarUpload();
     await renderOrderHistory();
+}
+
+function wireSettingsToggle() {
+    const card    = document.getElementById('settings-card');
+    const openBtn = document.getElementById('settings-toggle-btn');
+    const closeBtn = document.getElementById('settings-close-btn');
+    if (!card || !openBtn) return;
+    openBtn.onclick = () => {
+        card.classList.remove('hidden');
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    if (closeBtn) closeBtn.onclick = () => card.classList.add('hidden');
 }
 
 function wireSettingsRows() {
@@ -104,13 +117,16 @@ function renderProfile(p) {
 
     const img = document.getElementById('avatar-img');
     const ico = document.getElementById('avatar-icon');
+    const rm  = document.getElementById('avatar-remove-btn');
     if (p.avatar) {
         img.src = p.avatar;
         img.classList.remove('hidden');
         ico.classList.add('hidden');
+        if (rm) rm.classList.remove('hidden');
     } else {
         img.classList.add('hidden');
         ico.classList.remove('hidden');
+        if (rm) rm.classList.add('hidden');
     }
 
     if (window.lucide) lucide.createIcons();
@@ -195,7 +211,26 @@ function wirePasswordChange() {
 
 function wireAvatarUpload() {
     const btn   = document.getElementById('avatar-btn');
+    const rm    = document.getElementById('avatar-remove-btn');
     const input = document.getElementById('avatar-input');
+
+    if (rm) rm.onclick = async () => {
+        if (!confirm('Remove your profile picture?')) return;
+        try {
+            const data = await API.updateProfile({
+                full_name: currentProfile.full_name || '',
+                email:     currentProfile.email     || '',
+                phone:     currentProfile.phone     || '',
+                address:   currentProfile.address   || '',
+                avatar:    '',
+            });
+            currentProfile = { ...currentProfile, ...data.profile };
+            renderProfile(currentProfile);
+            Nav.toast?.('Profile picture removed.', 'success');
+        } catch (err) {
+            Nav.toast?.(err.message || 'Could not remove photo.', 'error');
+        }
+    };
 
     btn.onclick = () => input.click();
     input.onchange = async () => {
