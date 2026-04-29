@@ -32,15 +32,29 @@ async function initProfile() {
 }
 
 function wireSettingsToggle() {
-    const card    = document.getElementById('settings-card');
-    const openBtn = document.getElementById('settings-toggle-btn');
+    const modal    = document.getElementById('settings-modal');
+    const openBtn  = document.getElementById('settings-toggle-btn');
     const closeBtn = document.getElementById('settings-close-btn');
-    if (!card || !openBtn) return;
-    openBtn.onclick = () => {
-        card.classList.remove('hidden');
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!modal || !openBtn) return;
+
+    const open = () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        if (window.lucide) lucide.createIcons();
     };
-    if (closeBtn) closeBtn.onclick = () => card.classList.add('hidden');
+    const close = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+    };
+
+    openBtn.onclick = open;
+    if (closeBtn) closeBtn.onclick = close;
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+    });
 }
 
 function wireSettingsRows() {
