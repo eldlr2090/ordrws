@@ -117,38 +117,178 @@
         </form>
     </div>
 
-    <!-- PASSWORD CARD -->
+    <!-- SETTINGS CARD -->
     <div class="bg-white rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 shadow-sm mb-8">
-        <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
-            <h2 class="text-2xl font-black text-navy flex items-center gap-2">
-                <i data-lucide="lock" class="w-6 h-6 text-orange"></i> Change Password
-            </h2>
-            <button id="toggle-pw-btn" class="border-2 border-slate-200 text-navy hover:bg-slate-50 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
-                <i data-lucide="key" class="w-4 h-4"></i> Change
-            </button>
-        </div>
-        <form id="password-form" class="hidden grid sm:grid-cols-2 gap-x-6 gap-y-4">
-            <label class="block sm:col-span-2">
-                <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Current Password</span>
-                <input type="password" id="pw-current" autocomplete="current-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium">
-            </label>
-            <label class="block">
-                <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">New Password</span>
-                <input type="password" id="pw-new" autocomplete="new-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium" minlength="6">
-            </label>
-            <label class="block">
-                <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Confirm Password</span>
-                <input type="password" id="pw-confirm" autocomplete="new-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium" minlength="6">
-            </label>
-            <div class="sm:col-span-2 flex gap-3 pt-2">
-                <button type="submit" class="flex-1 bg-navy text-white hover:bg-orange transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
-                    <i data-lucide="shield-check" class="w-5 h-5"></i> Update Password
+        <h2 class="text-2xl font-black text-navy mb-6 border-b border-slate-100 pb-4 flex items-center gap-2">
+            <i data-lucide="settings" class="w-6 h-6 text-orange"></i> Settings
+        </h2>
+
+        <div class="space-y-3">
+
+            <!-- 1. Change Password -->
+            <div class="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                <button type="button" data-settings-toggle="pw-panel"
+                        class="settings-row w-full flex items-center justify-between p-4 sm:p-5 hover:bg-slate-50 transition text-left">
+                    <span class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center">
+                            <i data-lucide="key" class="w-5 h-5 text-navy"></i>
+                        </span>
+                        <span>
+                            <span class="block font-black text-navy">Change Password</span>
+                            <span class="block text-xs text-slate-400 font-medium">Update the password used to sign in</span>
+                        </span>
+                    </span>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 settings-chevron transition-transform"></i>
                 </button>
-                <button type="button" id="cancel-pw-btn" class="flex-1 border-2 border-slate-200 text-slate-600 hover:bg-slate-50 py-3 rounded-xl font-black">
-                    Cancel
-                </button>
+                <div id="pw-panel" class="hidden border-t border-slate-100 p-5 bg-slate-50/40">
+                    <form id="password-form" class="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+                        <label class="block sm:col-span-2">
+                            <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Current Password</span>
+                            <input type="password" id="pw-current" autocomplete="current-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium bg-white">
+                        </label>
+                        <label class="block">
+                            <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">New Password</span>
+                            <input type="password" id="pw-new" autocomplete="new-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium bg-white" minlength="6">
+                        </label>
+                        <label class="block">
+                            <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Confirm Password</span>
+                            <input type="password" id="pw-confirm" autocomplete="new-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium bg-white" minlength="6">
+                        </label>
+                        <div class="sm:col-span-2 flex gap-3 pt-2">
+                            <button type="submit" class="flex-1 bg-navy text-white hover:bg-orange transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
+                                <i data-lucide="shield-check" class="w-5 h-5"></i> Update Password
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </form>
+
+            <!-- 2. Notifications -->
+            <div class="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                <button type="button" data-settings-toggle="notif-panel"
+                        class="settings-row w-full flex items-center justify-between p-4 sm:p-5 hover:bg-slate-50 transition text-left">
+                    <span class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center">
+                            <i data-lucide="bell" class="w-5 h-5 text-navy"></i>
+                        </span>
+                        <span>
+                            <span class="block font-black text-navy">Notifications</span>
+                            <span class="block text-xs text-slate-400 font-medium">Choose what we let you know about</span>
+                        </span>
+                    </span>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 settings-chevron transition-transform"></i>
+                </button>
+                <div id="notif-panel" class="hidden border-t border-slate-100 p-5 bg-slate-50/40 space-y-3">
+                    <label class="flex items-center justify-between gap-4 bg-white rounded-xl p-4 border border-slate-100">
+                        <span>
+                            <span class="block font-bold text-navy text-sm">Order updates</span>
+                            <span class="block text-xs text-slate-400">When your order is shipped or delivered</span>
+                        </span>
+                        <input type="checkbox" id="notif-orders" class="w-5 h-5 accent-orange">
+                    </label>
+                    <label class="flex items-center justify-between gap-4 bg-white rounded-xl p-4 border border-slate-100">
+                        <span>
+                            <span class="block font-bold text-navy text-sm">New arrivals</span>
+                            <span class="block text-xs text-slate-400">Be the first to know about fresh drops</span>
+                        </span>
+                        <input type="checkbox" id="notif-arrivals" class="w-5 h-5 accent-orange">
+                    </label>
+                    <label class="flex items-center justify-between gap-4 bg-white rounded-xl p-4 border border-slate-100">
+                        <span>
+                            <span class="block font-bold text-navy text-sm">Promotions &amp; deals</span>
+                            <span class="block text-xs text-slate-400">Occasional discounts and sale alerts</span>
+                        </span>
+                        <input type="checkbox" id="notif-promos" class="w-5 h-5 accent-orange">
+                    </label>
+                    <button type="button" id="save-notif-btn" class="w-full bg-navy text-white hover:bg-orange transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
+                        <i data-lucide="check" class="w-5 h-5"></i> Save Preferences
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Privacy -->
+            <div class="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                <button type="button" data-settings-toggle="privacy-panel"
+                        class="settings-row w-full flex items-center justify-between p-4 sm:p-5 hover:bg-slate-50 transition text-left">
+                    <span class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center">
+                            <i data-lucide="shield" class="w-5 h-5 text-navy"></i>
+                        </span>
+                        <span>
+                            <span class="block font-black text-navy">Privacy</span>
+                            <span class="block text-xs text-slate-400 font-medium">Control how your information is used</span>
+                        </span>
+                    </span>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 settings-chevron transition-transform"></i>
+                </button>
+                <div id="privacy-panel" class="hidden border-t border-slate-100 p-5 bg-slate-50/40 space-y-3">
+                    <label class="flex items-center justify-between gap-4 bg-white rounded-xl p-4 border border-slate-100">
+                        <span>
+                            <span class="block font-bold text-navy text-sm">Show my order history to support staff</span>
+                            <span class="block text-xs text-slate-400">Helps us assist you faster when you contact us</span>
+                        </span>
+                        <input type="checkbox" id="priv-history" class="w-5 h-5 accent-orange" checked>
+                    </label>
+                    <label class="flex items-center justify-between gap-4 bg-white rounded-xl p-4 border border-slate-100">
+                        <span>
+                            <span class="block font-bold text-navy text-sm">Save my address for faster checkout</span>
+                            <span class="block text-xs text-slate-400">Auto-fill your delivery details on next order</span>
+                        </span>
+                        <input type="checkbox" id="priv-saveaddr" class="w-5 h-5 accent-orange" checked>
+                    </label>
+                    <button type="button" id="save-privacy-btn" class="w-full bg-navy text-white hover:bg-orange transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
+                        <i data-lucide="check" class="w-5 h-5"></i> Save Preferences
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4. Sign Out -->
+            <button type="button" id="settings-signout"
+                    class="settings-row w-full flex items-center justify-between p-4 sm:p-5 border-2 border-slate-100 rounded-2xl hover:bg-slate-50 transition text-left">
+                <span class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center">
+                        <i data-lucide="log-out" class="w-5 h-5 text-navy"></i>
+                    </span>
+                    <span>
+                        <span class="block font-black text-navy">Sign Out</span>
+                        <span class="block text-xs text-slate-400 font-medium">End your session on this device</span>
+                    </span>
+                </span>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
+            </button>
+
+            <!-- 5. Delete Account -->
+            <div class="border-2 border-red-100 bg-red-50/30 rounded-2xl overflow-hidden">
+                <button type="button" data-settings-toggle="delete-panel"
+                        class="settings-row w-full flex items-center justify-between p-4 sm:p-5 hover:bg-red-50 transition text-left">
+                    <span class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                            <i data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                        </span>
+                        <span>
+                            <span class="block font-black text-red-700">Delete Account</span>
+                            <span class="block text-xs text-red-400 font-medium">Permanently remove your account and orders</span>
+                        </span>
+                    </span>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-red-400 settings-chevron transition-transform"></i>
+                </button>
+                <div id="delete-panel" class="hidden border-t border-red-100 p-5">
+                    <p class="text-sm text-red-600 font-medium mb-4">
+                        This action cannot be undone. Your profile, cart, and order history will be deleted forever. Enter your password to confirm.
+                    </p>
+                    <form id="delete-form" class="space-y-3">
+                        <label class="block">
+                            <span class="text-[11px] uppercase font-black text-red-500 tracking-widest">Confirm Password</span>
+                            <input type="password" id="del-password" autocomplete="current-password" class="mt-1 w-full border-2 border-red-200 focus:border-red-500 outline-none px-4 py-3 rounded-xl font-medium bg-white">
+                        </label>
+                        <button type="submit" class="w-full bg-red-600 text-white hover:bg-red-700 transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i> Permanently Delete My Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <!-- ORDER HISTORY CARD -->

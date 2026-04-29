@@ -20,9 +20,76 @@ async function initProfile() {
     }
 
     wireProfileEditing();
+    wireSettingsRows();
     wirePasswordChange();
+    wireNotificationPrefs();
+    wirePrivacyPrefs();
+    wireSignOut();
+    wireDeleteAccount();
     wireAvatarUpload();
     await renderOrderHistory();
+}
+
+function wireSettingsRows() {
+    document.querySelectorAll('[data-settings-toggle]').forEach(btn => {
+        btn.onclick = () => {
+            const id    = btn.getAttribute('data-settings-toggle');
+            const panel = document.getElementById(id);
+            const chev  = btn.querySelector('.settings-chevron');
+            if (!panel) return;
+            const opened = panel.classList.toggle('hidden') === false;
+            if (chev) chev.style.transform = opened ? 'rotate(180deg)' : '';
+        };
+    });
+}
+
+function wireNotificationPrefs() {
+    const KEY = 'luckyth.notif';
+    const fields = ['notif-orders', 'notif-arrivals', 'notif-promos'];
+    const stored = JSON.parse(localStorage.getItem(KEY) || '{"notif-orders":true,"notif-arrivals":true,"notif-promos":false}');
+    fields.forEach(id => { const el = document.getElementById(id); if (el) el.checked = !!stored[id]; });
+    document.getElementById('save-notif-btn').onclick = () => {
+        const obj = {};
+        fields.forEach(id => obj[id] = document.getElementById(id).checked);
+        localStorage.setItem(KEY, JSON.stringify(obj));
+        Nav.toast?.('Notification preferences saved.', 'success');
+    };
+}
+
+function wirePrivacyPrefs() {
+    const KEY = 'luckyth.privacy';
+    const fields = ['priv-history', 'priv-saveaddr'];
+    const stored = JSON.parse(localStorage.getItem(KEY) || '{"priv-history":true,"priv-saveaddr":true}');
+    fields.forEach(id => { const el = document.getElementById(id); if (el) el.checked = !!stored[id]; });
+    document.getElementById('save-privacy-btn').onclick = () => {
+        const obj = {};
+        fields.forEach(id => obj[id] = document.getElementById(id).checked);
+        localStorage.setItem(KEY, JSON.stringify(obj));
+        Nav.toast?.('Privacy preferences saved.', 'success');
+    };
+}
+
+function wireSignOut() {
+    document.getElementById('settings-signout').onclick = () => {
+        if (confirm('Sign out of LuckyThrift?')) Nav.logout();
+    };
+}
+
+function wireDeleteAccount() {
+    const form = document.getElementById('delete-form');
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const pw = document.getElementById('del-password').value;
+        if (!pw) return Nav.toast?.('Please enter your password.', 'error');
+        if (!confirm('This will permanently delete your account, cart, and order history. Continue?')) return;
+        try {
+            await API.deleteAccount(pw);
+            Nav.toast?.('Account deleted.', 'success');
+            setTimeout(() => window.location.href = '/index.html', 800);
+        } catch (err) {
+            Nav.toast?.(err.message || 'Could not delete account.', 'error');
+        }
+    };
 }
 
 function renderProfile(p) {
@@ -108,17 +175,7 @@ function wireProfileEditing() {
 
 function wirePasswordChange() {
     const form = document.getElementById('password-form');
-    const toggleBtn = document.getElementById('toggle-pw-btn');
-    const cancelBtn = document.getElementById('cancel-pw-btn');
-
-    toggleBtn.onclick = () => {
-        form.classList.toggle('hidden');
-    };
-    cancelBtn.onclick = () => {
-        form.reset();
-        form.classList.add('hidden');
-    };
-
+    if (!form) return;
     form.onsubmit = async (e) => {
         e.preventDefault();
         const cur = document.getElementById('pw-current').value;
@@ -129,7 +186,6 @@ function wirePasswordChange() {
         try {
             await API.changePassword(cur, nw);
             form.reset();
-            form.classList.add('hidden');
             Nav.toast?.('Password changed.', 'success');
         } catch (err) {
             Nav.toast?.(err.message || 'Could not change password.', 'error');

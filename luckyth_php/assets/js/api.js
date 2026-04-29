@@ -27,6 +27,7 @@ const API = {
     updateProfile: (data) => apiFetch('auth/profile', 'PUT', data),
     changePassword: (current_password, new_password) =>
         apiFetch('auth/password', 'PUT', { current_password, new_password }),
+    deleteAccount:  (password) => apiFetch('auth/account', 'DELETE', { password }),
 
     // ── PRODUCTS ──────────────────────────────────────────────────────────────
     getProducts:   () => apiFetch('products'),

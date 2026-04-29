@@ -24,6 +24,7 @@ match(true) {
     $path === 'auth/profile'       && $method === 'GET'  => authGetProfile(),
     $path === 'auth/profile'       && $method === 'PUT'  => authUpdateProfile(),
     $path === 'auth/password'      && $method === 'PUT'  => authChangePassword(),
+    $path === 'auth/account'       && $method === 'DELETE' => authDeleteAccount(),
 
     // PRODUCTS
     $path === 'products'           && $method === 'GET'  => getProducts(),
@@ -174,6 +175,27 @@ function authChangePassword(): void {
     $hash = password_hash($next, PASSWORD_BCRYPT);
     $db->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([$hash, $user['id']]);
     jsonResponse(['success' => true, 'message' => 'Password changed.']);
+}
+
+function authDeleteAccount(): void {
+    $user = requireAuth();
+    if (($user['role'] ?? '') === 'admin') {
+        jsonResponse(['error' => 'Admin accounts cannot be deleted from here.'], 403);
+    }
+    $body = getBody();
+    $password = $body['password'] ?? '';
+
+    $db   = getDB();
+    $stmt = $db->prepare('SELECT password_hash FROM users WHERE id = ?');
+    $stmt->execute([$user['id']]);
+    $row  = $stmt->fetch();
+    if (!$row || !password_verify($password, $row['password_hash'])) {
+        jsonResponse(['error' => 'Password is incorrect.'], 401);
+    }
+
+    $db->prepare('DELETE FROM users WHERE id = ?')->execute([$user['id']]);
+    session_destroy();
+    jsonResponse(['success' => true, 'message' => 'Account deleted.']);
 }
 
 function authResetRequest(): void {
