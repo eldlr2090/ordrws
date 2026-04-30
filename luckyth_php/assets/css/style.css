@@ -60,3 +60,7 @@ html { scroll-behavior: smooth; font-family: 'Plus Jakarta Sans', sans-serif; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .img-arrow { position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.85);backdrop-filter:blur(4px);border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;color:var(--navy);transition:all 0.2s; }
 .img-arrow:hover { background:white;box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+
+/* Hidden scrollbar (used by the home New Releases slider) */
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
