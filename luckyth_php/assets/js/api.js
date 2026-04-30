@@ -55,6 +55,15 @@ const API = {
     // ── ADMIN ─────────────────────────────────────────────────────────────────
     adminGetOrders: () => apiFetch('admin/orders'),
 
+    // ── AUCTIONS ──────────────────────────────────────────────────────────────
+    getAuctions:          () => apiFetch('auctions'),
+    adminGetAuctions:     () => apiFetch('admin/auctions'),
+    adminCreateAuction:   (data) => apiFetch('admin/auctions', 'POST', data),
+    adminUpdateAuction:   (id, data) => apiFetch(`admin/auctions/${id}`, 'PUT', data),
+    adminDeleteAuction:   (id) => apiFetch(`admin/auctions/${id}`, 'DELETE'),
+    adminPublishAuction:  (id) => apiFetch(`admin/auctions/${id}/publish`,   'PUT'),
+    adminUnpublishAuction:(id) => apiFetch(`admin/auctions/${id}/unpublish`, 'PUT'),
+
     // ── ANALYTICS ─────────────────────────────────────────────────────────────
     getDashboard:    () => apiFetch('analytics/dashboard'),
     getCustomers:    () => apiFetch('analytics/customers'),

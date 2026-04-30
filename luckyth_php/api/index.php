@@ -49,6 +49,15 @@ match(true) {
     // ADMIN — ALL ORDERS
     $path === 'admin/orders'       && $method === 'GET'  => adminGetOrders(),
 
+    // AUCTIONS
+    $path === 'auctions'                                   && $method === 'GET'  => getAuctions(),
+    $path === 'admin/auctions'                             && $method === 'GET'  => adminGetAuctions(),
+    $path === 'admin/auctions'                             && $method === 'POST' => adminCreateAuction(),
+    preg_match('#^admin/auctions/(\d+)$#', $path, $m)         && $method === 'PUT'    => adminUpdateAuction((int)$m[1]),
+    preg_match('#^admin/auctions/(\d+)$#', $path, $m)         && $method === 'DELETE' => adminDeleteAuction((int)$m[1]),
+    preg_match('#^admin/auctions/(\d+)/publish$#', $path, $m) && $method === 'PUT'    => adminPublishAuction((int)$m[1]),
+    preg_match('#^admin/auctions/(\d+)/unpublish$#', $path, $m) && $method === 'PUT'  => adminUnpublishAuction((int)$m[1]),
+
     // ANALYTICS
     $path === 'analytics/dashboard' && $method === 'GET' => analyticsDashboard(),
     $path === 'analytics/customers' && $method === 'GET' => analyticsCustomers(),
@@ -557,6 +566,190 @@ function analyticsCustomers(): void {
 // ============================================================
 // HELPERS
 // ============================================================
+
+// ============================================================
+// AUCTION HANDLERS
+// ============================================================
+
+/** Compute the runtime status of an auction based on stored status + current time. */
+function deriveAuctionStatus(array $row): string {
+    $stored = $row['status'] ?? 'draft';
+    if ($stored === 'draft' || $stored === 'cancelled' || $stored === 'ended') return $stored;
+    $now   = time();
+    $start = !empty($row['start_time']) ? strtotime($row['start_time']) : null;
+    $end   = !empty($row['end_time'])   ? strtotime($row['end_time'])   : null;
+    if ($end && $now >= $end)     return 'ended';
+    if ($start && $now < $start)  return 'scheduled';
+    return 'live';
+}
+
+function formatAuction(array $r): array {
+    return [
+        'id'              => (int)$r['id'],
+        'name'            => $r['name'],
+        'description'     => $r['description'],
+        'images'          => json_decode($r['images'] ?? '[]', true),
+        'category'        => $r['category'] ?? 'Other',
+        'starting_price'  => (float)$r['starting_price'],
+        'bid_increment'   => (float)$r['bid_increment'],
+        'current_bid'     => $r['current_bid'] !== null ? (float)$r['current_bid'] : null,
+        'current_bidder_id' => $r['current_bidder_id'] !== null ? (int)$r['current_bidder_id'] : null,
+        'start_time'      => $r['start_time'],
+        'end_time'        => $r['end_time'],
+        'status'          => deriveAuctionStatus($r),
+        'stored_status'   => $r['status'],
+        'winner_id'       => $r['winner_id'] !== null ? (int)$r['winner_id'] : null,
+        'created_at'      => $r['created_at'] ?? null,
+    ];
+}
+
+/** Public: only published (non-draft, non-cancelled) auctions. */
+function getAuctions(): void {
+    $db   = getDB();
+    $rows = $db->query(
+        "SELECT * FROM auctions WHERE status NOT IN ('draft','cancelled') ORDER BY end_time ASC NULLS LAST, id DESC"
+    )->fetchAll();
+    $out = array_map('formatAuction', $rows);
+    jsonResponse(['auctions' => $out]);
+}
+
+/** Admin: every auction including drafts. */
+function adminGetAuctions(): void {
+    requireAdmin();
+    $rows = getDB()->query('SELECT * FROM auctions ORDER BY id DESC')->fetchAll();
+    jsonResponse(['auctions' => array_map('formatAuction', $rows)]);
+}
+
+function adminCreateAuction(): void {
+    requireAdmin();
+    $body = getBody();
+    $db   = getDB();
+    $stmt = $db->prepare(
+        'INSERT INTO auctions
+            (name, description, images, category, starting_price, bid_increment, start_time, end_time, status)
+         VALUES (?,?,?,?,?,?,?,?, \'draft\')
+         RETURNING id'
+    );
+    $stmt->execute([
+        $body['name']           ?? '',
+        $body['description']    ?? '',
+        json_encode($body['images'] ?? []),
+        ($body['category']      ?? '') ?: 'Other',
+        (float)($body['starting_price'] ?? 0),
+        (float)($body['bid_increment']  ?? 20),
+        ($body['start_time']    ?? '') ?: null,
+        ($body['end_time']      ?? '') ?: null,
+    ]);
+    jsonResponse(['success' => true, 'id' => (int)$stmt->fetch()['id']]);
+}
+
+function adminUpdateAuction(int $id): void {
+    requireAdmin();
+    $body = getBody();
+    $db   = getDB();
+
+    // Check current state — can't edit core fields once anyone has bid on it.
+    $stmt = $db->prepare('SELECT * FROM auctions WHERE id = ?');
+    $stmt->execute([$id]);
+    $existing = $stmt->fetch();
+    if (!$existing) jsonResponse(['error' => 'Auction not found.'], 404);
+
+    $hasBids = (int)$db->query("SELECT COUNT(*) AS c FROM bids WHERE auction_id = $id")->fetch()['c'] > 0;
+    if ($hasBids && in_array($existing['status'], ['live','ended'], true)) {
+        jsonResponse(['error' => 'Cannot edit an auction that already has bids.'], 409);
+    }
+
+    $db->prepare(
+        'UPDATE auctions
+            SET name=?, description=?, images=?, category=?, starting_price=?, bid_increment=?,
+                start_time=?, end_time=?, updated_at=CURRENT_TIMESTAMP
+            WHERE id=?'
+    )->execute([
+        $body['name']           ?? '',
+        $body['description']    ?? '',
+        json_encode($body['images'] ?? []),
+        ($body['category']      ?? '') ?: 'Other',
+        (float)($body['starting_price'] ?? 0),
+        (float)($body['bid_increment']  ?? 20),
+        ($body['start_time']    ?? '') ?: null,
+        ($body['end_time']      ?? '') ?: null,
+        $id,
+    ]);
+    jsonResponse(['success' => true]);
+}
+
+function adminDeleteAuction(int $id): void {
+    requireAdmin();
+    $db   = getDB();
+    $stmt = $db->prepare('SELECT status FROM auctions WHERE id = ?');
+    $stmt->execute([$id]);
+    $row  = $stmt->fetch();
+    if (!$row) jsonResponse(['error' => 'Auction not found.'], 404);
+    if ($row['status'] !== 'draft') {
+        jsonResponse(['error' => 'Only drafts can be deleted. Cancel published auctions instead.'], 409);
+    }
+    $db->prepare('DELETE FROM auctions WHERE id = ?')->execute([$id]);
+    jsonResponse(['success' => true]);
+}
+
+function adminPublishAuction(int $id): void {
+    requireAdmin();
+    $db   = getDB();
+    $stmt = $db->prepare('SELECT * FROM auctions WHERE id = ?');
+    $stmt->execute([$id]);
+    $a = $stmt->fetch();
+    if (!$a) jsonResponse(['error' => 'Auction not found.'], 404);
+    if ($a['status'] !== 'draft') jsonResponse(['error' => 'Auction is already published.'], 409);
+
+    // Validation gate before going live.
+    $errors = [];
+    if (trim($a['name']) === '')                   $errors[] = 'Name is required.';
+    if ((float)$a['starting_price'] <= 0)          $errors[] = 'Starting price must be greater than 0.';
+    if ((float)$a['bid_increment']  <= 0)          $errors[] = 'Bid increment must be greater than 0.';
+    if (empty($a['start_time']))                   $errors[] = 'Start time is required.';
+    if (empty($a['end_time']))                     $errors[] = 'End time is required.';
+    $imgs = json_decode($a['images'] ?? '[]', true);
+    if (empty($imgs))                              $errors[] = 'At least one image is required.';
+
+    if (!empty($a['start_time']) && !empty($a['end_time'])) {
+        $start = strtotime($a['start_time']);
+        $end   = strtotime($a['end_time']);
+        $now   = time();
+        if ($end <= $start)            $errors[] = 'End time must be after start time.';
+        if ($end < $now)               $errors[] = 'End time must be in the future.';
+        if (($end - $start) < 3600)    $errors[] = 'Auction must run for at least 1 hour.';
+        if (($end - $start) > 1209600) $errors[] = 'Auction cannot run longer than 14 days.';
+    }
+
+    if (!empty($errors)) jsonResponse(['error' => implode(' ', $errors)], 422);
+
+    // Decide initial status based on start_time.
+    $now    = time();
+    $start  = strtotime($a['start_time']);
+    $newSt  = ($now >= $start) ? 'live' : 'scheduled';
+
+    $db->prepare('UPDATE auctions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+       ->execute([$newSt, $id]);
+    jsonResponse(['success' => true, 'status' => $newSt]);
+}
+
+function adminUnpublishAuction(int $id): void {
+    requireAdmin();
+    $db   = getDB();
+    $stmt = $db->prepare('SELECT status FROM auctions WHERE id = ?');
+    $stmt->execute([$id]);
+    $row  = $stmt->fetch();
+    if (!$row) jsonResponse(['error' => 'Auction not found.'], 404);
+    if ($row['status'] !== 'scheduled') {
+        jsonResponse(['error' => 'Only scheduled auctions can be moved back to draft.'], 409);
+    }
+    $hasBids = (int)$db->query("SELECT COUNT(*) AS c FROM bids WHERE auction_id = $id")->fetch()['c'] > 0;
+    if ($hasBids) jsonResponse(['error' => 'Cannot unpublish — bids already exist.'], 409);
+
+    $db->prepare("UPDATE auctions SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+       ->execute([$id]);
+    jsonResponse(['success' => true]);
+}
 
 function formatOrders(array $rows): array {
     return array_map(function($o) {
