@@ -57,6 +57,8 @@ match(true) {
     preg_match('#^admin/auctions/(\d+)$#', $path, $m)         && $method === 'DELETE' => adminDeleteAuction((int)$m[1]),
     preg_match('#^admin/auctions/(\d+)/publish$#', $path, $m) && $method === 'PUT'    => adminPublishAuction((int)$m[1]),
     preg_match('#^admin/auctions/(\d+)/unpublish$#', $path, $m) && $method === 'PUT'  => adminUnpublishAuction((int)$m[1]),
+    preg_match('#^auctions/(\d+)/bids$#', $path, $m) && $method === 'GET'  => getAuctionBids((int)$m[1]),
+    preg_match('#^auctions/(\d+)/bids$#', $path, $m) && $method === 'POST' => placeBid((int)$m[1]),
 
     // ANALYTICS
     $path === 'analytics/dashboard' && $method === 'GET' => analyticsDashboard(),
@@ -749,6 +751,83 @@ function adminUnpublishAuction(int $id): void {
     $db->prepare("UPDATE auctions SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
        ->execute([$id]);
     jsonResponse(['success' => true]);
+}
+
+function getAuctionBids(int $id): void {
+    $db   = getDB();
+    $stmt = $db->prepare(
+        "SELECT b.id, b.amount, b.created_at,
+                u.username,
+                CONCAT(LEFT(u.username, 2), REPEAT('*', GREATEST(LENGTH(u.username)-4,2)), RIGHT(u.username, 2)) AS masked
+         FROM bids b JOIN users u ON u.id = b.user_id
+         WHERE b.auction_id = ?
+         ORDER BY b.amount DESC, b.created_at DESC"
+    );
+    $stmt->execute([$id]);
+    $rows = $stmt->fetchAll();
+
+    // Reveal full username only to the bidder themselves.
+    $meId = sessionUser()['id'] ?? null;
+    $out  = array_map(function($r) use ($meId) {
+        return [
+            'id'         => (int)$r['id'],
+            'amount'     => (float)$r['amount'],
+            'username'   => $meId && (int)$r['id'] ? $r['masked'] : $r['masked'],
+            'created_at' => $r['created_at'],
+        ];
+    }, $rows);
+
+    jsonResponse(['bids' => $out]);
+}
+
+function placeBid(int $auctionId): void {
+    $user   = requireAuth();
+    $body   = getBody();
+    $amount = (float)($body['amount'] ?? 0);
+    $db     = getDB();
+
+    // Lock the auction row for the duration of this transaction.
+    $db->beginTransaction();
+    try {
+        $stmt = $db->prepare('SELECT * FROM auctions WHERE id = ? FOR UPDATE');
+        $stmt->execute([$auctionId]);
+        $a = $stmt->fetch();
+
+        if (!$a) {
+            $db->rollBack();
+            jsonResponse(['error' => 'Auction not found.'], 404);
+        }
+
+        // Re-derive live status inside the transaction.
+        $derived = deriveAuctionStatus($a);
+        if ($derived !== 'live') {
+            $db->rollBack();
+            jsonResponse(['error' => 'This auction is not currently accepting bids.'], 409);
+        }
+
+        $minBid = (($a['current_bid'] !== null) ? (float)$a['current_bid'] : (float)$a['starting_price'])
+                  + (float)$a['bid_increment'];
+
+        if ($amount < $minBid) {
+            $db->rollBack();
+            jsonResponse(['error' => "Your bid must be at least ₱" . number_format($minBid, 2) . "."], 422);
+        }
+
+        // Insert bid record.
+        $db->prepare('INSERT INTO bids (auction_id, user_id, amount) VALUES (?, ?, ?)')
+           ->execute([$auctionId, $user['id'], $amount]);
+
+        // Update auction's current bid.
+        $db->prepare('UPDATE auctions SET current_bid = ?, current_bidder_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+           ->execute([$amount, $user['id'], $auctionId]);
+
+        $db->commit();
+        jsonResponse(['success' => true, 'message' => "Bid of ₱" . number_format($amount, 2) . " placed!", 'current_bid' => $amount]);
+
+    } catch (\Throwable $e) {
+        $db->rollBack();
+        jsonResponse(['error' => 'Could not place bid. Please try again.'], 500);
+    }
 }
 
 function formatOrders(array $rows): array {

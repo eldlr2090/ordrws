@@ -63,6 +63,8 @@ const API = {
     adminDeleteAuction:   (id) => apiFetch(`admin/auctions/${id}`, 'DELETE'),
     adminPublishAuction:  (id) => apiFetch(`admin/auctions/${id}/publish`,   'PUT'),
     adminUnpublishAuction:(id) => apiFetch(`admin/auctions/${id}/unpublish`, 'PUT'),
+    getAuctionBids:       (id) => apiFetch(`auctions/${id}/bids`),
+    placeBid:             (id, amount) => apiFetch(`auctions/${id}/bids`, 'POST', { amount }),
 
     // ── ANALYTICS ─────────────────────────────────────────────────────────────
     getDashboard:    () => apiFetch('analytics/dashboard'),
