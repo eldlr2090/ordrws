@@ -220,6 +220,15 @@ async function bootPage() {
     } finally {
         clearTimeout(safetyTimeout);
         hideLoader(); // ALWAYS runs
+        // Inject chat widget on all public (non-admin) pages
+        const isAdminPage = document.body.hasAttribute('data-admin-page');
+        if (!isAdminPage) {
+            const chatRoot = document.createElement('div');
+            chatRoot.id = 'chat-widget-root';
+            document.body.appendChild(chatRoot);
+            await loadInclude('chat-widget-root', BASE + '/includes/chat-widget.html');
+            if (typeof initChatWidget === 'function') initChatWidget();
+        }
         // Signal all page scripts that nav + auth are ready
         document.dispatchEvent(new CustomEvent('pageReady', { detail: { user: Nav.user } }));
     }

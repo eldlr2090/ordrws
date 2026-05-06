@@ -60,6 +60,14 @@ match(true) {
     preg_match('#^auctions/(\d+)/bids$#', $path, $m) && $method === 'GET'  => getAuctionBids((int)$m[1]),
     preg_match('#^auctions/(\d+)/bids$#', $path, $m) && $method === 'POST' => placeBid((int)$m[1]),
 
+    // CHAT
+    $path === 'chat/messages'  && $method === 'GET'  => getChatMessages(),
+    $path === 'chat/messages'  && $method === 'POST' => sendChatMessage(),
+    $path === 'chat/unread'    && $method === 'GET'  => getChatUnread(),
+    $path === 'admin/chat'     && $method === 'GET'  => adminGetChats(),
+    preg_match('#^admin/chat/(\d+)$#', $path, $m) && $method === 'GET'  => adminGetUserChat((int)$m[1]),
+    preg_match('#^admin/chat/(\d+)$#', $path, $m) && $method === 'POST' => adminReplyChat((int)$m[1]),
+
     // ANALYTICS
     $path === 'analytics/dashboard' && $method === 'GET' => analyticsDashboard(),
     $path === 'analytics/customers' && $method === 'GET' => analyticsCustomers(),
@@ -600,25 +608,35 @@ function formatAuction(array $r): array {
         'end_time'        => $r['end_time'],
         'status'          => deriveAuctionStatus($r),
         'stored_status'   => $r['status'],
-        'winner_id'       => $r['winner_id'] !== null ? (int)$r['winner_id'] : null,
-        'created_at'      => $r['created_at'] ?? null,
+        'winner_id'        => $r['winner_id'] !== null ? (int)$r['winner_id'] : null,
+        'winner_username'  => $r['winner_username'] ?? null,
+        'winning_order_id' => $r['winning_order_id'] !== null ? (int)$r['winning_order_id'] : null,
+        'created_at'       => $r['created_at'] ?? null,
     ];
 }
 
 /** Public: only published (non-draft, non-cancelled) auctions. */
 function getAuctions(): void {
+    finalizeEndedAuctions();
     $db   = getDB();
     $rows = $db->query(
-        "SELECT * FROM auctions WHERE status NOT IN ('draft','cancelled') ORDER BY end_time ASC NULLS LAST, id DESC"
+        "SELECT a.*, u.username AS winner_username
+         FROM auctions a LEFT JOIN users u ON u.id = a.winner_id
+         WHERE a.status NOT IN ('draft','cancelled')
+         ORDER BY a.end_time ASC NULLS LAST, a.id DESC"
     )->fetchAll();
-    $out = array_map('formatAuction', $rows);
-    jsonResponse(['auctions' => $out]);
+    jsonResponse(['auctions' => array_map('formatAuction', $rows)]);
 }
 
 /** Admin: every auction including drafts. */
 function adminGetAuctions(): void {
     requireAdmin();
-    $rows = getDB()->query('SELECT * FROM auctions ORDER BY id DESC')->fetchAll();
+    finalizeEndedAuctions();
+    $rows = getDB()->query(
+        "SELECT a.*, u.username AS winner_username
+         FROM auctions a LEFT JOIN users u ON u.id = a.winner_id
+         ORDER BY a.id DESC"
+    )->fetchAll();
     jsonResponse(['auctions' => array_map('formatAuction', $rows)]);
 }
 
@@ -750,6 +768,145 @@ function adminUnpublishAuction(int $id): void {
 
     $db->prepare("UPDATE auctions SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
        ->execute([$id]);
+    jsonResponse(['success' => true]);
+}
+
+// ── AUCTION FINALIZER ──────────────────────────────────────────────────────────
+function finalizeEndedAuctions(): void {
+    $db   = getDB();
+    $stmt = $db->query(
+        "SELECT * FROM auctions
+         WHERE status IN ('live','scheduled')
+           AND end_time IS NOT NULL
+           AND end_time < CURRENT_TIMESTAMP"
+    );
+    $toEnd = $stmt->fetchAll();
+    foreach ($toEnd as $a) {
+        $db->beginTransaction();
+        try {
+            if ($a['current_bidder_id']) {
+                $ins = $db->prepare(
+                    "INSERT INTO orders (user_id, total_amount, delivery_addr, payment_method, status)
+                     VALUES (?, ?, 'Auction Win — Awaiting Address', 'Auction Win', 'Pending')
+                     RETURNING id"
+                );
+                $ins->execute([$a['current_bidder_id'], $a['current_bid']]);
+                $orderId = (int)$ins->fetch()['id'];
+
+                $db->prepare("INSERT INTO order_items (order_id, name, price) VALUES (?, ?, ?)")
+                   ->execute([$orderId, $a['name'] . ' (Auction Win)', $a['current_bid']]);
+
+                $db->prepare(
+                    "UPDATE auctions SET status='ended', winner_id=?, winning_order_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?"
+                )->execute([$a['current_bidder_id'], $orderId, $a['id']]);
+            } else {
+                $db->prepare("UPDATE auctions SET status='ended', updated_at=CURRENT_TIMESTAMP WHERE id=?")
+                   ->execute([$a['id']]);
+            }
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+        }
+    }
+}
+
+// ── CHAT HANDLERS ─────────────────────────────────────────────────────────────
+function getChatMessages(): void {
+    $user = requireAuth();
+    $db   = getDB();
+    $stmt = $db->prepare("SELECT * FROM chat_messages WHERE user_id = ? ORDER BY created_at ASC");
+    $stmt->execute([$user['id']]);
+    $rows = $stmt->fetchAll();
+    // Mark admin replies as read
+    $db->prepare("UPDATE chat_messages SET read_at=CURRENT_TIMESTAMP
+                  WHERE user_id=? AND from_admin=TRUE AND read_at IS NULL")
+       ->execute([$user['id']]);
+    jsonResponse(['messages' => array_map(fn($r) => [
+        'id'         => (int)$r['id'],
+        'content'    => $r['content'],
+        'from_admin' => (bool)$r['from_admin'],
+        'created_at' => $r['created_at'],
+    ], $rows)]);
+}
+
+function getChatUnread(): void {
+    $user = requireAuth();
+    $stmt = getDB()->prepare(
+        "SELECT COUNT(*) AS c FROM chat_messages WHERE user_id=? AND from_admin=TRUE AND read_at IS NULL"
+    );
+    $stmt->execute([$user['id']]);
+    jsonResponse(['unread' => (int)$stmt->fetch()['c']]);
+}
+
+function sendChatMessage(): void {
+    $user = requireAuth();
+    if (($user['role'] ?? '') === 'admin') jsonResponse(['error' => 'Admins use the admin reply endpoint.'], 403);
+    $body    = getBody();
+    $content = trim($body['content'] ?? '');
+    if (!$content)           jsonResponse(['error' => 'Message cannot be empty.'], 422);
+    if (strlen($content) > 2000) jsonResponse(['error' => 'Message too long (max 2000 chars).'], 422);
+    getDB()->prepare("INSERT INTO chat_messages (user_id, content, from_admin) VALUES (?, ?, FALSE)")
+           ->execute([$user['id'], $content]);
+    jsonResponse(['success' => true]);
+}
+
+function adminGetChats(): void {
+    requireAdmin();
+    $db   = getDB();
+    $rows = $db->query(
+        "SELECT u.id, u.username,
+                MAX(m.created_at) AS last_at,
+                (SELECT content FROM chat_messages WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS preview,
+                COUNT(CASE WHEN m.from_admin=FALSE AND m.read_at IS NULL THEN 1 END) AS unread
+         FROM users u
+         JOIN chat_messages m ON m.user_id = u.id
+         GROUP BY u.id, u.username
+         ORDER BY last_at DESC"
+    )->fetchAll();
+    jsonResponse(['conversations' => array_map(fn($r) => [
+        'user_id'  => (int)$r['id'],
+        'username' => $r['username'],
+        'preview'  => $r['preview'],
+        'last_at'  => $r['last_at'],
+        'unread'   => (int)$r['unread'],
+    ], $rows)]);
+}
+
+function adminGetUserChat(int $userId): void {
+    requireAdmin();
+    $db   = getDB();
+    $stmt = $db->prepare("SELECT * FROM chat_messages WHERE user_id=? ORDER BY created_at ASC");
+    $stmt->execute([$userId]);
+    $rows = $stmt->fetchAll();
+    // Mark customer messages read
+    $db->prepare("UPDATE chat_messages SET read_at=CURRENT_TIMESTAMP
+                  WHERE user_id=? AND from_admin=FALSE AND read_at IS NULL")
+       ->execute([$userId]);
+    $u = $db->prepare("SELECT username FROM users WHERE id=?");
+    $u->execute([$userId]);
+    $row = $u->fetch();
+    jsonResponse([
+        'username' => $row['username'] ?? 'Unknown',
+        'messages' => array_map(fn($r) => [
+            'id'         => (int)$r['id'],
+            'content'    => $r['content'],
+            'from_admin' => (bool)$r['from_admin'],
+            'created_at' => $r['created_at'],
+        ], $rows),
+    ]);
+}
+
+function adminReplyChat(int $userId): void {
+    requireAdmin();
+    $body    = getBody();
+    $content = trim($body['content'] ?? '');
+    if (!$content) jsonResponse(['error' => 'Reply cannot be empty.'], 422);
+    $db   = getDB();
+    $chk  = $db->prepare("SELECT id FROM users WHERE id=?");
+    $chk->execute([$userId]);
+    if (!$chk->fetch()) jsonResponse(['error' => 'User not found.'], 404);
+    $db->prepare("INSERT INTO chat_messages (user_id, content, from_admin) VALUES (?, ?, TRUE)")
+       ->execute([$userId, $content]);
     jsonResponse(['success' => true]);
 }
 

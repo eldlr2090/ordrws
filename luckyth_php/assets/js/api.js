@@ -66,6 +66,14 @@ const API = {
     getAuctionBids:       (id) => apiFetch(`auctions/${id}/bids`),
     placeBid:             (id, amount) => apiFetch(`auctions/${id}/bids`, 'POST', { amount }),
 
+    // ── CHAT ──────────────────────────────────────────────────────────────────
+    getChatMessages:  () => apiFetch('chat/messages'),
+    getChatUnread:    () => apiFetch('chat/unread'),
+    sendChatMessage:  (content) => apiFetch('chat/messages', 'POST', { content }),
+    adminGetChats:    () => apiFetch('admin/chat'),
+    adminGetUserChat: (userId) => apiFetch(`admin/chat/${userId}`),
+    adminReplyChat:   (userId, content) => apiFetch(`admin/chat/${userId}`, 'POST', { content }),
+
     // ── ANALYTICS ─────────────────────────────────────────────────────────────
     getDashboard:    () => apiFetch('analytics/dashboard'),
     getCustomers:    () => apiFetch('analytics/customers'),

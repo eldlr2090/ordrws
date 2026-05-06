@@ -202,9 +202,14 @@ function renderTable() {
     }
 
     tbody.innerHTML = rows.map(a => {
-        const img = a.images?.[0] || '';
+        const img     = a.images?.[0] || '';
         const current = a.current_bid !== null ? `₱${a.current_bid}` : '<span class="text-slate-300">No bids</span>';
-        const window  = `<div class="text-xs"><div><span class="text-slate-400">Starts:</span> ${fmtTime(a.start_time)}</div><div><span class="text-slate-400">Ends:</span> ${fmtTime(a.end_time)}</div></div>`;
+        const timeWin = `<div class="text-xs"><div><span class="text-slate-400">Starts:</span> ${fmtTime(a.start_time)}</div><div><span class="text-slate-400">Ends:</span> ${fmtTime(a.end_time)}</div></div>`;
+        const winnerCol = a.status === 'ended'
+            ? (a.winner_username
+                ? `<div class="text-xs"><span class="inline-block bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">🏆 ${a.winner_username}</span>${a.winning_order_id ? `<div class="mt-1 text-slate-400">Order #${a.winning_order_id}</div>` : ''}</div>`
+                : `<span class="text-xs text-slate-300 font-bold">No winner</span>`)
+            : timeWin;
         return `
             <tr class="hover:bg-slate-50">
                 <td class="px-6 py-4">
@@ -218,7 +223,7 @@ function renderTable() {
                 </td>
                 <td class="px-6 py-4 font-black text-navy">₱${a.starting_price}</td>
                 <td class="px-6 py-4 font-bold text-navy">${current}</td>
-                <td class="px-6 py-4 text-slate-600 font-medium">${window}</td>
+                <td class="px-6 py-4 text-slate-600 font-medium">${winnerCol}</td>
                 <td class="px-6 py-4 text-right">
                     <div class="flex justify-end gap-2 flex-wrap">
                         ${actionButtons(a)}

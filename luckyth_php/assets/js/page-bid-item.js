@@ -158,14 +158,36 @@ function renderActionArea(a) {
                 <p class="text-xs text-slate-300 mt-1">Come back when it goes live!</p>
             </div>`;
     } else {
-        const finalBid = a.current_bid
+        const user       = typeof Nav !== 'undefined' ? Nav.user : null;
+        const isWinner   = user && a.winner_id && user.id === a.winner_id;
+        const hasBids    = !!a.current_bid;
+        const finalBid   = hasBids
             ? `<p class="text-xs text-slate-400 mt-1">Final bid: <strong class="text-navy">₱${Number(a.current_bid).toLocaleString()}</strong></p>`
             : `<p class="text-xs text-slate-300 mt-1">No bids were placed.</p>`;
-        area.innerHTML = `
-            <div class="mt-2 p-4 bg-slate-50 rounded-xl text-center">
-                <p class="text-sm font-bold text-slate-500">This auction has ended.</p>
-                ${finalBid}
-            </div>`;
+
+        if (isWinner) {
+            area.innerHTML = `
+                <div class="mt-2 space-y-3">
+                    <div class="p-4 bg-green-50 rounded-2xl border-2 border-green-200 text-center">
+                        <p class="font-black text-green-700 text-base mb-1">🎉 You won this auction!</p>
+                        <p class="text-xs text-green-600 font-medium">Winning bid: <strong>₱${Number(a.current_bid).toLocaleString()}</strong></p>
+                        <p class="text-xs text-green-600 font-medium mt-0.5">Your order has been created — check your orders for next steps.</p>
+                    </div>
+                    <a href="/profile.html"
+                        class="flex items-center justify-center gap-2 w-full bg-navy hover:bg-slate-800 text-white font-black py-3.5 rounded-2xl transition-colors text-sm uppercase tracking-widest">
+                        View My Orders
+                    </a>
+                </div>`;
+        } else {
+            area.innerHTML = `
+                <div class="mt-2 p-4 bg-slate-50 rounded-xl text-center">
+                    <p class="text-sm font-bold text-slate-500">This auction has ended.</p>
+                    ${finalBid}
+                    ${hasBids && a.winner_username
+                        ? `<p class="text-xs text-slate-400 mt-1">Won by <strong class="text-navy">${a.winner_username}</strong></p>`
+                        : ''}
+                </div>`;
+        }
     }
 }
 
